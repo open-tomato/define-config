@@ -1,3 +1,24 @@
+- validate throws a TypeError synchronously and never attaches a handler to the returned promise
+  trigger: when a Standard Schema validate returns a Promise that later rejects
+  kind: gotcha
+  cause: the design refuses async results outright, so nothing awaits or catches the promise
+  resolution: the tests use only resolving promises; attaching a rejection handler is left as a follow-up decision
+  artifact: validated asynchronously; only synchronous validation is supported
+  signal: silent
+- PIPESTATUS is empty under zsh, so the echoed exit code was blank rather than 0 or 1
+  trigger: when reading gate exit codes after a pipe in the zsh shell
+  kind: gotcha
+  cause: zsh names the array pipestatus in lowercase, and $? after a pipe is the exit code of tail
+  resolution: run each gate without a pipe and redirect to /dev/null, then read $?
+  artifact: lint exit=
+  signal: silent
+- ESLint rejects an implicit arrow return that starts on the next line, and the dangling close paren of the call
+  trigger: when writing a multi-line arrow body as flatMap(([a, b]) =>\n  expr) in this repo
+  kind: gotcha
+  cause: the shared rules enforce beside-style arrow bodies and function-paren-newline
+  resolution: use a block body with a named local helper and an explicit return
+  artifact: Expected no linebreak before this expression  @stylistic/implicit-arrow-linebreak
+  signal: loud
 - unlabelled entries share one implicit layer, so overlapping keys emit a duplicate-key warning even in the spec's first and third examples
   trigger: when writing merge examples with unlabelled entries that overlap on a key
   kind: gotcha
@@ -218,27 +239,3 @@
   kind: location
   artifact: bun run gate:control-bytes / context-page-imports.test.ts
   signal: loud
-- gates section titled 'Rafa Gates' with env var and old commands
-  trigger: when reading tdd-guide.md before edits
-  kind: location
-  artifact: ## Rafa Gates / env -u CLAUDECODE bun test
-  signal: loud
-- gates section referenced old rafa gates (bunx tsc, bunx eslint)
-  trigger: when reading loop-implementer.md before edits
-  kind: location
-  artifact: Run the gates this repo needs — `bun test`, `bunx tsc --noEmit`, `bunx eslint .`
-  signal: loud
-- umbrella AGENTS.md has lines up to 454 chars due to markdown tables; define-config AGENTS.md has max 231 chars
-  trigger: checking wrap width consistency
-  kind: gotcha
-  cause: table rows in markdown are exempt from wrap measurement; prose in define-config file flows naturally
-  resolution: no action needed; per rules, wrap width is per-file measurement and tables are exempt
-  artifact: max line width: 231 characters (prose); 454 (umbrella, with tables)
-  signal: silent
-- define-config uses eslint flat config with markdown linting enabled by default
-  trigger: documenting ESLint configuration
-  kind: pattern
-  cause: config in eslint.config.mjs includes markdown plugin
-  resolution: documented behavior and remediation strategy in gates section
-  artifact: eslint.config.mjs lines 66-75
-  signal: silent
