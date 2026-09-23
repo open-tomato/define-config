@@ -1,3 +1,10 @@
+- eslint does not cover .yml files, so lint passing says nothing about workflow validity
+  trigger: when adding YAML files to this repo
+  kind: gotcha
+  cause: the flat config has no YAML parser configured
+  resolution: parse the YAML separately to validate it
+  artifact: .github/workflows/ci.yml
+  signal: silent
 - the repo has no installed git hooks and core.hooksPath is unset
   trigger: checking for pre-commit hooks before leaving work for the loop's commit
   kind: location
