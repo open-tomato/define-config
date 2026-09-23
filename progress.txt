@@ -1,3 +1,25 @@
+- artifact: PLAN_TRACKER-rafa-2-open-tomato-define-config.md: src/graph/types.ts repeat?: number;
+- artifact: PLAN_TRACKER-rafa-2-open-tomato-define-config.md: src/graph/types.ts onChoice?: Handler;
+- shape errors are passed through unchanged, not diagnosed, since no diagnostic code covers them
+  trigger: when deciding what normalise does with a non-map onChoice or a non-object flow
+  kind: pattern
+  cause: DIAGNOSTIC_CODES has no shape code besides schema, which belongs to validate
+  resolution: documented in the module TSDoc as the host schema's to check
+  signal: silent
+- EdgeTarget.repeat is a number in types.ts but the stage text says repeat: true exempts a back edge
+  trigger: when a later graph stage reads repeat on an edge object
+  kind: gotcha
+  cause: types task and the resolveGraph stage context disagree on the repeat type
+  resolution: left as is; cycles.ts must settle which shape it reads
+  artifact: repeat?: number;
+  signal: silent
+- StepEntry.onChoice is typed Handler, so a spec-shaped onChoice map does not type as StepEntry
+  trigger: when typing onChoice as a Record<name, next> in a flow
+  kind: gotcha
+  cause: src/graph/types.ts declares onChoice?: Handler while the spec says onChoice: Record<name, next>
+  resolution: normalise takes Readonly<Record<string, unknown>> instead of Flows
+  artifact: onChoice?: Handler;
+  signal: silent
 - validate throws a TypeError synchronously and never attaches a handler to the returned promise
   trigger: when a Standard Schema validate returns a Promise that later rejects
   kind: gotcha
@@ -208,34 +230,3 @@
   resolution: used the plan list of 11 codes
   artifact: .rafa/plans/PLAN-rafa-2-open-tomato-define-config.md
   signal: silent
-- one-line ternary rejected by lint
-  trigger: when writing a ternary inside a map callback in src
-  kind: gotcha
-  cause: shared rules enforce @stylistic/multiline-ternary
-  resolution: use an if with early return instead
-  artifact: Expected newline between test and consequent of ternary expression
-  signal: loud
-- @stylistic/multiline-ternary rejects single-line ternaries
-  trigger: when writing a ternary in scripts under this ESLint config
-  kind: gotcha
-  cause: shared lint rules require newlines between test, consequent and alternate
-  resolution: avoid the ternary, for example Number(cond)
-  artifact: Expected newline between test and consequent of ternary expression
-  signal: loud
-- dry-run lists files as lines of the form 'packed <size> <path>' and runs the prepack build first
-  trigger: when parsing bun pm pack --dry-run output
-  kind: pattern
-  cause: bun pm pack triggers the prepack script even with --dry-run
-  resolution: parse with /^packed\s+\S+\s+(.+?)\s*$/ per line
-  artifact: packed 82B dist/index.js
-  signal: silent
-- frontmatter description still referenced context/ pages
-  trigger: when reading doc-updater.md description
-  kind: location
-  artifact: AGENTS.md maps, `context/` pages, READMEs
-  signal: loud
-- Verification section referenced rafa-specific paths and control-byte scripts
-  trigger: when reading doc-updater.md before edits
-  kind: location
-  artifact: bun run gate:control-bytes / context-page-imports.test.ts
-  signal: loud
