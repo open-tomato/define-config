@@ -1,3 +1,10 @@
+- unlabelled entries share one implicit layer, so overlapping keys emit a duplicate-key warning even in the spec's first and third examples
+  trigger: when writing merge examples with unlabelled entries that overlap on a key
+  kind: gotcha
+  cause: same-layer detection treats all entries without $layer as one layer
+  resolution: assert only the diagnostic under test, e.g. filter by code, rather than expecting an empty diagnostics array
+  artifact: is set more than once within one layer: the unlabelled layer
+  signal: loud
 - a chain written as `fc\n  .array(` is not matched by a single-line rewrite
   trigger: when regex-renaming fc.x to x across a multi-line chain
   kind: gotcha
@@ -234,18 +241,4 @@
   cause: config in eslint.config.mjs includes markdown plugin
   resolution: documented behavior and remediation strategy in gates section
   artifact: eslint.config.mjs lines 66-75
-  signal: silent
-- ESLint markdown linter requires language specifiers on all fenced code blocks
-  trigger: creating AGENTS.md for new repository
-  kind: pattern
-  cause: default markdown/fenced-code-language rule rejects unlabeled fences
-  resolution: added language specifiers: text, sh, ts to all code blocks
-  artifact: markdown/fenced-code-language
-  signal: loud
-- eslint does not cover .yml files, so lint passing says nothing about workflow validity
-  trigger: when adding YAML files to this repo
-  kind: gotcha
-  cause: the flat config has no YAML parser configured
-  resolution: parse the YAML separately to validate it
-  artifact: .github/workflows/ci.yml
   signal: silent
