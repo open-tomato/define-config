@@ -1,3 +1,10 @@
+- the root .gitignore rule .rafa/ ignores the fixture's .rafa/config.yaml, so git add -A would silently skip it
+  trigger: when adding a fixture directory named .rafa under src/
+  kind: gotcha
+  cause: rafa's tracking block ignores every directory named .rafa at any depth
+  resolution: added !src/loader/fixtures/**/.rafa/ after the managed block in .gitignore
+  artifact: .rafa/
+  signal: silent
 - import/order wants import type from '.' before the parent '../' type imports, and a blank line between parent and sibling value-import groups
   trigger: when a test file in src/<area>/ imports its own index module
   kind: pattern
@@ -222,11 +229,4 @@
   cause: src/graph/types.ts declares onChoice?: Handler while the spec says onChoice: Record<name, next>
   resolution: normalise takes Readonly<Record<string, unknown>> instead of Flows
   artifact: onChoice?: Handler;
-  signal: silent
-- validate throws a TypeError synchronously and never attaches a handler to the returned promise
-  trigger: when a Standard Schema validate returns a Promise that later rejects
-  kind: gotcha
-  cause: the design refuses async results outright, so nothing awaits or catches the promise
-  resolution: the tests use only resolving promises; attaching a rejection handler is left as a follow-up decision
-  artifact: validated asynchronously; only synchronous validation is supported
   signal: silent

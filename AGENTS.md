@@ -111,7 +111,11 @@ Write tests first (RED), implement to pass (GREEN), refactor (IMPROVE), verify c
 - **Registry:** npmjs (https://registry.npmjs.org/)
 - **Scope:** `@open-tomato`
 - **Access:** public
-- **Sideeffects:** false (pure module, tree-shaking safe)
+- **Sideeffects:** `["./src/index.ts"]` — every published `dist/` file is
+  side-effect-free (pure module, tree-shaking safe). The one listed path is
+  the build entry, and it is not published: with `"sideEffects": false`,
+  `bun build` 1.3.14 treats the entry as dead and emits a `dist/index.js`
+  that exports names it never defines. `src/index.test.ts` catches this.
 - **Package entrypoint:** `./dist/index.js`
 - **Types:** `./dist/index.d.ts`
 - **Files included:** `dist/` and `NOTICE`
