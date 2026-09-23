@@ -1,3 +1,36 @@
+- flatten reports sugar-written inline entries at on.<outcome>, while normalise reports conflicts at the sugar key (onSuccess)
+  trigger: when a later step reports a problem inside an inline entry written with sugar
+  kind: gotcha
+  cause: normalise has already folded sugar into on before flatten runs
+  resolution: kept on.<outcome>, which matches the stage's flows.<flow>.<id>.on.<outcome> form
+  signal: silent
+- reported as duplicate-key at the handler path; the entry the user wrote wins, then the first generated one, and the loser is dropped with its handler
+  trigger: when a generated id equals an id already in the flow
+  kind: pattern
+  cause: DIAGNOSTIC_CODES has no code for a generated-id clash
+  resolution: reused duplicate-key and documented it in the module TSDoc
+  artifact: duplicate-key
+  signal: silent
+- flatten keeps repeat as boolean or number because the stage text says repeat: true while types.ts declares repeat?: number
+  trigger: when cycles.ts decides whether a back edge is exempt
+  kind: gotcha
+  cause: the types task and the resolveGraph stage context disagree on the type of repeat
+  resolution: left unresolved in flatten; cycles.ts must settle which values count as exempt
+  artifact: readonly repeat: boolean | number;
+  signal: silent
+- flatten leaves string handlers as strings and rewrites only edge objects, so build must read two target shapes: a string id and { to, repeat }
+  trigger: when build.ts reads handler targets after flatten
+  kind: pattern
+  cause: the task text says the handler becomes the id and only edge objects become { to, repeat }
+  resolution: build.ts handles both shapes
+  signal: silent
+- pathToString writes a segment containing a dot in bracket form, not escaped
+  trigger: when asserting a diagnostic path whose segment contains a dot
+  kind: gotcha
+  cause: diagnostics.ts quotes non-identifier segments as ["a.b"]
+  resolution: compare the path array instead of its string form for ids containing a dot
+  artifact: flows.next["a.b"].on.c
+  signal: loud
 - artifact: PLAN_TRACKER-rafa-2-open-tomato-define-config.md: src/graph/types.ts repeat?: number;
 - artifact: PLAN_TRACKER-rafa-2-open-tomato-define-config.md: src/graph/types.ts onChoice?: Handler;
 - shape errors are passed through unchanged, not diagnosed, since no diagnostic code covers them
@@ -201,32 +234,3 @@
   resolution: the replace shape's index signature admits true beside the partial value; the resulting gap is documented in TSDoc
   artifact: Property '$replace' is incompatible with index signature.
   signal: loud
-- TypeScript accepted a stray true at a map id (steps: { lint: true }) that each union member refuses on its own
-  trigger: when typing a keyed-map entry as an intersection of a named-key part and an index-signature part, in a union with a $replace shape
-  kind: gotcha
-  cause: a union of intersections that carry index signatures is related more loosely than a union of single object types
-  resolution: build each shape as one homomorphic mapped type over a key skeleton (OptionalKeys<T> & { [id]?: 0 }) so the result is a single object type
-  artifact: { steps: { lint: true } }
-  signal: silent
-- NOTICE said the package redistributes no third-party source file, and that became false
-  trigger: vendoring third-party source
-  kind: location
-  cause: the same-commit doc rule applies to NOTICE
-  resolution: rewrote the sentence and appended the MIT text
-  artifact: redistributes no
-    third-party source file
-  signal: silent
-- the implicit-arrow-linebreak rule rejects an arrow body that starts on the next line
-  trigger: writing a multi-line ternary as an arrow body in a test
-  kind: gotcha
-  cause: the arrow-function style is 'beside', so the body must start on the same line as the arrow
-  resolution: move the logic into a named function that uses early returns
-  artifact: Expected no linebreak before this expression  @stylistic/implicit-arrow-linebreak
-  signal: loud
-- spec lists 9 codes; plan adds handler-conflict and load-failed (handler-conflict also appears in the spec risks section)
-  trigger: when choosing diagnostic codes
-  kind: location
-  cause: code list spread across spec Diagnostics section, spec risks, and plan context
-  resolution: used the plan list of 11 codes
-  artifact: .rafa/plans/PLAN-rafa-2-open-tomato-define-config.md
-  signal: silent

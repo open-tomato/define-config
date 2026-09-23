@@ -140,8 +140,12 @@ export interface GraphEdge {
   to: string;
   /** The outcome the edge is taken on. */
   outcome: string;
-  /** How many times the edge may be taken in one run, when bounded. */
-  repeat?: number;
+  /**
+   * The `repeat` of the edge object the handler was written as: `true`, or
+   * how many times the edge may be taken in one run, for an edge meant to
+   * loop back; `false` for a handler written as an id or without `repeat`.
+   */
+  repeat: boolean | number;
 }
 
 /** One resolved flow of a {@link Graph}. */
