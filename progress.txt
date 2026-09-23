@@ -1,3 +1,31 @@
+- artifact: PLAN_TRACKER-rafa-2-open-tomato-define-config.md: Property '$layer' is incompatible with index signature.
+- a mapped type with ? on every key made $replace optional, so a replace shape matched objects without the marker
+  trigger: when writing a homomorphic mapped type that needs $replace required and other keys optional
+  kind: pattern
+  cause: a ? on the mapped type applies to every key, including $replace
+  resolution: put the modifiers on the skeleton ({ $replace: 0 } & OptionalKeys<T>) and map over keyof S without modifiers so each key keeps its own
+  signal: silent
+- strip every directive and require the error count to equal the directive count, then apply targeted loosening mutations and require unused-directive errors
+  trigger: when proving @ts-expect-error assertions are not false negatives
+  kind: pattern
+  cause: a passing check-types alone cannot show that each refused line errors for the intended reason
+  resolution: sed out the directives, count error TS lines, restore; perl-edit one rule at a time, run tsc, restore and diff
+  artifact: TS2578: Unused '@ts-expect-error' directive.
+  signal: silent
+- the $replace: true key is checked against the map's index signature and refused
+  trigger: when a $replace object stands in for a keyed map (Record<string, V>)
+  kind: gotcha
+  cause: TS relates every source property, named or not, to the target's string index signature
+  resolution: the replace shape's index signature admits true beside the partial value; the resulting gap is documented in TSDoc
+  artifact: Property '$replace' is incompatible with index signature.
+  signal: loud
+- TypeScript accepted a stray true at a map id (steps: { lint: true }) that each union member refuses on its own
+  trigger: when typing a keyed-map entry as an intersection of a named-key part and an index-signature part, in a union with a $replace shape
+  kind: gotcha
+  cause: a union of intersections that carry index signatures is related more loosely than a union of single object types
+  resolution: build each shape as one homomorphic mapped type over a key skeleton (OptionalKeys<T> & { [id]?: 0 }) so the result is a single object type
+  artifact: { steps: { lint: true } }
+  signal: silent
 - NOTICE said the package redistributes no third-party source file, and that became false
   trigger: vendoring third-party source
   kind: location

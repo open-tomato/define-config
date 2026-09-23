@@ -1,0 +1,91 @@
+import type {
+  EdgeTarget,
+  FlowEntry,
+  Flows,
+  Graph,
+  StepEntry,
+  StepRegistry,
+} from './types';
+
+import { describe, expect, test } from 'bun:test';
+
+type Outcomes = 'pass' | 'fail';
+
+describe('StepEntry', () => {
+  test('refuses a wrong outcome name in on and accepts a right one', () => {
+    // @ts-expect-error `passs` is not an outcome of the step
+    const bad: StepEntry<Outcomes> = { on: { passs: 'deploy' } };
+    const good: StepEntry<Outcomes> = { on: { pass: 'deploy' } };
+    expect<unknown[]>([bad.on, good.on]).toEqual([{ passs: 'deploy' }, { pass: 'deploy' }]);
+  });
+
+  test('refuses a wrong outcome name in expect and accepts a right one', () => {
+    // @ts-expect-error `passs` is not an outcome of the step
+    const bad: StepEntry<Outcomes> = { expect: 'passs' };
+    const good: StepEntry<Outcomes> = { expect: 'pass' };
+    expect<unknown[]>([bad.expect, good.expect]).toEqual(['passs', 'pass']);
+  });
+
+  test('refuses a when that is not before: or after: an id', () => {
+    // @ts-expect-error `when` is `before:<id>` or `after:<id>`
+    const bad: StepEntry<Outcomes, 'lint'> = { when: 'during:lint' };
+    const good: StepEntry<Outcomes, 'lint'> = { when: 'after:lint' };
+    expect<unknown[]>([bad.when, good.when]).toEqual(['during:lint', 'after:lint']);
+  });
+
+  test('refuses a non-numeric repeat on an edge object', () => {
+    // @ts-expect-error `repeat` is a number
+    const bad: EdgeTarget = { to: 'build', repeat: 'twice' };
+    const good: EdgeTarget = { to: 'build', repeat: 2 };
+    expect<unknown[]>([bad, good]).toEqual([{ to: 'build', repeat: 'twice' }, { to: 'build', repeat: 2 }]);
+  });
+
+  test('passes any other key through as a step option', () => {
+    const entry: StepEntry<Outcomes> = { step: 'run', command: 'bun test', onFail: 'report' };
+    expect(entry.command).toBe('bun test');
+  });
+});
+
+describe('FlowEntry and Flows', () => {
+  test('refuses a wrong outcome name inside a flow and accepts a right one', () => {
+    // @ts-expect-error `passs` is not an outcome of the flow's steps
+    const bad: Flows<Outcomes> = { main: { build: { on: { passs: 'deploy' } } } };
+    const good: Flows<Outcomes> = { main: { build: { on: { pass: 'deploy' } } } };
+    expect([Object.keys(bad), Object.keys(good)]).toEqual([['main'], ['main']]);
+  });
+
+  test('types $start and $unattended beside the step entries', () => {
+    // @ts-expect-error `$start` names a step id of the flow
+    const bad: FlowEntry<Outcomes, 'build'> = { $start: 'lint', build: {} };
+    const good: FlowEntry<Outcomes, 'build'> = { $start: 'build', $unattended: true, build: {} };
+    expect<unknown[]>([bad.$start, good.$start]).toEqual(['lint', 'build']);
+  });
+});
+
+describe('StepRegistry and Graph', () => {
+  test('describe a registry and the graph resolved from it', () => {
+    // Arrange
+    const registry: StepRegistry = { build: { outcomes: ['pass', 'fail'], required: true } };
+
+    // Act
+    const graph: Graph = {
+      nodes: {
+        'main.build': {
+          id: 'build',
+          flow: 'main',
+          step: 'build',
+          outcomes: registry.build?.outcomes ?? [],
+          options: {},
+          required: true,
+          pure: false,
+          interactive: false,
+        },
+      },
+      edges: [{ from: 'main.build', to: 'main.build', outcome: 'fail', repeat: 2 }],
+      flows: { main: { name: 'main', start: 'main.build', unattended: false, nodes: ['main.build'] } },
+    };
+
+    // Assert
+    expect(graph.nodes['main.build']?.outcomes).toEqual(['pass', 'fail']);
+  });
+});
