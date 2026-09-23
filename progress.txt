@@ -1,3 +1,23 @@
+- the index signature must also admit string and boolean for $start and $unattended, so a step id set to a string is not refused
+  trigger: when a flow object mixes reserved $-keys with an index signature of step entries
+  kind: pattern
+  cause: TypeScript checks named properties against the index signature
+  resolution: documented in the TSDoc of FlowEntry; an intersection is not an option because it refuses $start itself
+  signal: silent
+- a non-numeric repeat is refused, but the error names String.prototype.repeat instead of the edge field
+  trigger: when an edge type is a union of string and an object with a repeat field
+  kind: gotcha
+  cause: the object literal is also checked against string's apparent type, which has a repeat method
+  resolution: the error still fires and the test stands; read the message with this in mind
+  artifact: Type 'string' is not assignable to type 'number | ((count: number) => string) | undefined'.
+  signal: silent
+- the runtime assertion's own argument is type-checked against the typed value, so the deliberately wrong twin makes toEqual fail check-types
+  trigger: when a type test passes an object literal typed from a union of literals to expect().toEqual()
+  kind: gotcha
+  cause: bun:test expect<T> infers T from the actual value and checks the expected argument against it
+  resolution: write expect<unknown[]>([...]) for the runtime companion of a refused line
+  artifact: error TS2769: No overload matches this call.
+  signal: loud
 - artifact: PLAN_TRACKER-rafa-2-open-tomato-define-config.md: Property '$layer' is incompatible with index signature.
 - a mapped type with ? on every key made $replace optional, so a replace shape matched objects without the marker
   trigger: when writing a homomorphic mapped type that needs $replace required and other keys optional
