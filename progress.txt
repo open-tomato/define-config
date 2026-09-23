@@ -1,3 +1,31 @@
+- several types used in public signatures are not in the stage's type list and are not exported: ResolveGraphResult, ConfigLoader, SchemaSection, DiagnosticLevel, Loaders, LayerDir, Source
+  trigger: when deciding which types src/index.ts exports
+  kind: location
+  cause: the stage lists 15 types explicitly; I kept to that list rather than widen the surface
+  resolution: left for the review task to decide; users can still reach them through ReturnType or Parameters
+  artifact: ResolveGraphResult
+  signal: silent
+- the first match of an export name in index.d.ts is inside the TSDoc comment, not the export clause
+  trigger: when a control test strips a function name from dist/index.d.ts with a regex
+  kind: pattern
+  cause: the index module docblock links every function with {@link name}
+  resolution: the control replaces the literal clause text '{ validate, validateSections }' instead of the first occurrence of the name
+  artifact: {@link validateSections}
+  signal: silent
+- neither --ignore-dce-annotations nor rewriting the entry as import-then-export stops the pruning
+  trigger: when trying to work around the bun sideEffects pruning without touching package.json
+  kind: gotcha
+  cause: bun still reads the package-level sideEffects field for the entry file
+  resolution: changed the manifest field instead; measured each alternative at 1 module and 100 bytes
+  artifact: Bundled 1 module
+  signal: loud
+- bun build 1.3.14 bundles only the entry and emits an export list naming bindings it never defines; the build exits 0
+  trigger: when bun build bundles an entry that only re-exports, inside a package whose package.json sets sideEffects false
+  kind: gotcha
+  cause: bun applies the package's sideEffects false to the build entry itself and prunes every re-exported module
+  resolution: set sideEffects to the unpublished entry path src/index.ts so the entry is kept; the published dist files remain side-effect-free
+  artifact: Export 'createLoader' is not defined in module
+  signal: silent
 - the root .gitignore rule .rafa/ ignores the fixture's .rafa/config.yaml, so git add -A would silently skip it
   trigger: when adding a fixture directory named .rafa under src/
   kind: gotcha
@@ -194,39 +222,4 @@
   cause: the types task and the resolveGraph stage context disagree on the type of repeat
   resolution: left unresolved in flatten; cycles.ts must settle which values count as exempt
   artifact: readonly repeat: boolean | number;
-  signal: silent
-- flatten leaves string handlers as strings and rewrites only edge objects, so build must read two target shapes: a string id and { to, repeat }
-  trigger: when build.ts reads handler targets after flatten
-  kind: pattern
-  cause: the task text says the handler becomes the id and only edge objects become { to, repeat }
-  resolution: build.ts handles both shapes
-  signal: silent
-- pathToString writes a segment containing a dot in bracket form, not escaped
-  trigger: when asserting a diagnostic path whose segment contains a dot
-  kind: gotcha
-  cause: diagnostics.ts quotes non-identifier segments as ["a.b"]
-  resolution: compare the path array instead of its string form for ids containing a dot
-  artifact: flows.next["a.b"].on.c
-  signal: loud
-- artifact: PLAN_TRACKER-rafa-2-open-tomato-define-config.md: src/graph/types.ts repeat?: number;
-- artifact: PLAN_TRACKER-rafa-2-open-tomato-define-config.md: src/graph/types.ts onChoice?: Handler;
-- shape errors are passed through unchanged, not diagnosed, since no diagnostic code covers them
-  trigger: when deciding what normalise does with a non-map onChoice or a non-object flow
-  kind: pattern
-  cause: DIAGNOSTIC_CODES has no shape code besides schema, which belongs to validate
-  resolution: documented in the module TSDoc as the host schema's to check
-  signal: silent
-- EdgeTarget.repeat is a number in types.ts but the stage text says repeat: true exempts a back edge
-  trigger: when a later graph stage reads repeat on an edge object
-  kind: gotcha
-  cause: types task and the resolveGraph stage context disagree on the repeat type
-  resolution: left as is; cycles.ts must settle which shape it reads
-  artifact: repeat?: number;
-  signal: silent
-- StepEntry.onChoice is typed Handler, so a spec-shaped onChoice map does not type as StepEntry
-  trigger: when typing onChoice as a Record<name, next> in a flow
-  kind: gotcha
-  cause: src/graph/types.ts declares onChoice?: Handler while the spec says onChoice: Record<name, next>
-  resolution: normalise takes Readonly<Record<string, unknown>> instead of Flows
-  artifact: onChoice?: Handler;
   signal: silent
