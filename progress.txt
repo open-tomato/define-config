@@ -1,3 +1,17 @@
+- spec lists 9 codes; plan adds handler-conflict and load-failed (handler-conflict also appears in the spec risks section)
+  trigger: when choosing diagnostic codes
+  kind: location
+  cause: code list spread across spec Diagnostics section, spec risks, and plan context
+  resolution: used the plan list of 11 codes
+  artifact: .rafa/plans/PLAN-rafa-2-open-tomato-define-config.md
+  signal: silent
+- one-line ternary rejected by lint
+  trigger: when writing a ternary inside a map callback in src
+  kind: gotcha
+  cause: shared rules enforce @stylistic/multiline-ternary
+  resolution: use an if with early return instead
+  artifact: Expected newline between test and consequent of ternary expression
+  signal: loud
 - @stylistic/multiline-ternary rejects single-line ternaries
   trigger: when writing a ternary in scripts under this ESLint config
   kind: gotcha
