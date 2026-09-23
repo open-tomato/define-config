@@ -1,3 +1,17 @@
+- a chain written as `fc\n  .array(` is not matched by a single-line rewrite
+  trigger: when regex-renaming fc.x to x across a multi-line chain
+  kind: gotcha
+  cause: the receiver and method are on different lines
+  resolution: fix the leftover `fc` by hand after the rewrite
+  artifact: 'fc' is not defined
+  signal: loud
+- ESLint warns import/no-named-as-default-member for every fc.* call
+  trigger: when importing fast-check as a default import in a test
+  kind: gotcha
+  cause: fast-check exposes named exports, the lint config flags member access on the default import
+  resolution: use named imports from 'fast-check'
+  artifact: Caution: `fc` also has a named export
+  signal: loud
 - the quotes rule has no avoidEscape, so a double-quoted string holding single quotes is a lint error
   trigger: when a string in a test contains single quotes
   kind: gotcha
@@ -234,18 +248,4 @@
   cause: the flat config has no YAML parser configured
   resolution: parse the YAML separately to validate it
   artifact: .github/workflows/ci.yml
-  signal: silent
-- the repo has no installed git hooks and core.hooksPath is unset
-  trigger: checking for pre-commit hooks before leaving work for the loop's commit
-  kind: location
-  cause: no hook tooling has been set up
-  resolution: none needed; noted so later tasks do not assume a hook runs
-  artifact: .git/hooks contains only *.sample files
-  signal: silent
-- rafa's eslint.base.mjs imports ./scripts/unsafeUnicode.mjs for the ar/no-unsafe-unicode rule, so the config cannot be copied on its own
-  trigger: copying the rafa ESLint config into a repo without rafa's scripts/ directory
-  kind: location
-  cause: the unsafe-unicode rule is a custom 193-line local plugin
-  resolution: dropped the rule block; porting the plugin is a separate decision
-  artifact: import unsafeUnicode from './scripts/unsafeUnicode.mjs';
   signal: silent
