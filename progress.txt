@@ -1,3 +1,40 @@
+- artifact: PLAN_TRACKER-rafa-2-open-tomato-define-config.md: Typed config arrays with id-keyed merge
+- artifact: PLAN_TRACKER-rafa-2-open-tomato-define-config.md: extends: ['markdown/recommended']
+- extract each fenced ts block, rewrite the package import to ../src/index, run tsc with a tsconfig extending the repo one, then execute each block and compare output to the comments
+  trigger: when verifying README examples match shipped signatures
+  kind: pattern
+  cause: README code is neither type-checked nor, in this repo, linted by any gate
+  resolution: one-off harness in a temporary folder, deleted after use
+  artifact: readme-check-tmp
+  signal: silent
+- tsc include globs skip dot-directories, so a temporary harness under .readme-check found no inputs
+  trigger: when running tsc over files in a dot-directory
+  kind: gotcha
+  cause: TypeScript include wildcards exclude names starting with a dot
+  resolution: used a non-dot temporary directory and removed it after
+  artifact: error TS18003: No inputs were found in config file
+  signal: loud
+- MergeResult.value TSDoc said the value shares no object with any entry, but class instances and functions pass through by reference
+  trigger: when auditing merge immutability claims
+  kind: gotcha
+  cause: copyValue copies only arrays and plain objects by design
+  resolution: doc corrected on MergeResult.value, apply and the README; behaviour unchanged
+  artifact: a new object sharing no object or array with any
+  signal: silent
+- the public EdgeTarget.repeat was typed number while cycles only exempts repeat === true, so the documented loop mark did not type-check and repeat: 2 type-checked but still yields cycle
+  trigger: when type-checking the README repeat: true loop example
+  kind: gotcha
+  cause: graph/types.ts typed repeat as a count while flatten and GraphEdge carry boolean | number
+  resolution: widened EdgeTarget.repeat to boolean | number with TSDoc saying only true marks the loop; type test updated
+  artifact: Type 'boolean' is not assignable to type 'number'.
+  signal: loud
+- bun run lint does not lint code inside README fenced ts blocks; identical code gives 4 lint errors as a .ts file and 0 inside a README.md ts block
+  trigger: when checking README examples with bun run lint
+  kind: gotcha
+  cause: eslint.config.mjs applies markdown/recommended to **/*.md but sets no processor: 'markdown/markdown', so fenced code is never extracted
+  resolution: verified README examples by extracting each ts block, running tsc against src/index.ts, and executing them; lint config left unchanged
+  artifact: extends: ['markdown/recommended']
+  signal: silent
 - several types used in public signatures are not in the stage's type list and are not exported: ResolveGraphResult, ConfigLoader, SchemaSection, DiagnosticLevel, Loaders, LayerDir, Source
   trigger: when deciding which types src/index.ts exports
   kind: location
@@ -181,45 +218,4 @@
   kind: pattern
   cause: the stage text mentions implicit nodes only for handler targets and defines unknown-step only for an anchor that exists nowhere
   resolution: documented in the module TSDoc; the node's NodeSource is implicit true at the when path, and reachability must not report implicit nodes as unreachable entries
-  signal: silent
-- the substitution silently matched nothing, so the mutation check would have reported a false pass
-  trigger: when writing perl mutations containing a dollar key such as flow.$start inside a double-quoted shell string
-  kind: gotcha
-  cause: shell and perl both interpolate the dollar sign, so the pattern changed before perl saw it
-  resolution: compare the mutated file against the backup with cmp and flag MUTATION DID NOT APPLY, then quote the pattern in single quotes
-  artifact: MUTATION DID NOT APPLY
-  signal: silent
-- the mutation survived because the only case that tells the two apart, a non-string step on an entry whose id is itself a registered step, had no test
-  trigger: when mutating build.ts to read the spec by node.step instead of the per-entry spec map
-  kind: pattern
-  cause: an unregistered step name also looks up to undefined, so the simple fixtures could not tell the two implementations apart
-  resolution: added a test with build step 42 beside expect and when, which fails under the mutation
-  artifact: no specs skip:  37 pass  0 fail
-  signal: silent
-- GraphEdge.repeat was typed number and could not hold the repeat true that the stage says exempts a back edge
-  trigger: when build emits an edge carrying repeat true from an edge object
-  kind: gotcha
-  cause: the types task typed repeat as a bound count while the spec and stage use repeat true
-  resolution: widened GraphEdge.repeat to a required boolean | number and rewrote its TSDoc in the same change
-  artifact: Type 'number | boolean' is not assignable to type 'number | undefined'.
-  signal: loud
-- flatten reports sugar-written inline entries at on.<outcome>, while normalise reports conflicts at the sugar key (onSuccess)
-  trigger: when a later step reports a problem inside an inline entry written with sugar
-  kind: gotcha
-  cause: normalise has already folded sugar into on before flatten runs
-  resolution: kept on.<outcome>, which matches the stage's flows.<flow>.<id>.on.<outcome> form
-  signal: silent
-- reported as duplicate-key at the handler path; the entry the user wrote wins, then the first generated one, and the loser is dropped with its handler
-  trigger: when a generated id equals an id already in the flow
-  kind: pattern
-  cause: DIAGNOSTIC_CODES has no code for a generated-id clash
-  resolution: reused duplicate-key and documented it in the module TSDoc
-  artifact: duplicate-key
-  signal: silent
-- flatten keeps repeat as boolean or number because the stage text says repeat: true while types.ts declares repeat?: number
-  trigger: when cycles.ts decides whether a back edge is exempt
-  kind: gotcha
-  cause: the types task and the resolveGraph stage context disagree on the type of repeat
-  resolution: left unresolved in flatten; cycles.ts must settle which values count as exempt
-  artifact: readonly repeat: boolean | number;
   signal: silent
