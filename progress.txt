@@ -1,0 +1,21 @@
+- an empty entry file still gets a valid dist/index.d.ts (export {};) because moduleDetection is force
+  trigger: tsc -p tsconfig.build.json on an empty src/index.ts
+  kind: pattern
+  cause: moduleDetection force treats every file as a module
+  resolution: no export {} needed in the scaffold
+  artifact: export {};
+  signal: silent
+- bun blocks the unrs-resolver postinstall script; the rafa checkout has the same blocked script
+  trigger: bun install with the eslint-import-resolver-typescript devDependency
+  kind: gotcha
+  cause: bun does not trust lifecycle scripts by default
+  resolution: left blocked, same as rafa
+  artifact: ./node_modules/unrs-resolver @1.12.2
+  signal: silent
+- bun test exits 1 when no test file matches, so the test gate cannot be green on an empty scaffold
+  trigger: running bun test on a scaffold with no test files
+  kind: gotcha
+  cause: bun treats zero matching test files as an error
+  resolution: the next task needs at least one test file (or another fix) to make bun test green
+  artifact: error: 0 test files matching **{.test,.spec,_test_,_spec_}.{js,ts,jsx,tsx}
+  signal: loud
