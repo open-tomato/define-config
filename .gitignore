@@ -1,3 +1,5 @@
 # >>> rafa tracking: rafa rewrites the lines up to the end marker
 .rafa/
 # <<< rafa tracking
+node_modules
+dist
