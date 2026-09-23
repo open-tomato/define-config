@@ -1,3 +1,46 @@
+- artifact: PLAN_TRACKER-rafa-2-open-tomato-define-config.md: function isPlainObject(value: unknown): value is Readonly<Record<string, unknown>>
+- artifact: PLAN_TRACKER-rafa-2-open-tomato-define-config.md: repeat?: number;
+- FlowSummary.start is empty string because the type requires a string
+  trigger: when a flow has no step entry and no resolvable $start
+  kind: gotcha
+  cause: FlowSummary.start is typed string, not optional
+  resolution: documented in the build.ts TSDoc; reachability should treat an empty start as no start
+  artifact: start: ''
+  signal: silent
+- build returns sources (path and implicit flag per node key) and hooks (flow, node, anchor, position) beside the graph; when hooks are not edges
+  trigger: when reachability or cycles read build output
+  kind: location
+  cause: Graph has no field for a when placement or for the path an entry was written at
+  resolution: read BuildResult.sources for diagnostic paths and BuildResult.hooks for when anchors
+  artifact: export interface GraphHook
+  signal: silent
+- build makes an implicit node for it, as it does for handler targets, so every hook anchor and edge endpoint is a key of graph.nodes
+  trigger: when a when anchor names a registered step that has no entry in the flow
+  kind: pattern
+  cause: the stage text mentions implicit nodes only for handler targets and defines unknown-step only for an anchor that exists nowhere
+  resolution: documented in the module TSDoc; the node's NodeSource is implicit true at the when path, and reachability must not report implicit nodes as unreachable entries
+  signal: silent
+- the substitution silently matched nothing, so the mutation check would have reported a false pass
+  trigger: when writing perl mutations containing a dollar key such as flow.$start inside a double-quoted shell string
+  kind: gotcha
+  cause: shell and perl both interpolate the dollar sign, so the pattern changed before perl saw it
+  resolution: compare the mutated file against the backup with cmp and flag MUTATION DID NOT APPLY, then quote the pattern in single quotes
+  artifact: MUTATION DID NOT APPLY
+  signal: silent
+- the mutation survived because the only case that tells the two apart, a non-string step on an entry whose id is itself a registered step, had no test
+  trigger: when mutating build.ts to read the spec by node.step instead of the per-entry spec map
+  kind: pattern
+  cause: an unregistered step name also looks up to undefined, so the simple fixtures could not tell the two implementations apart
+  resolution: added a test with build step 42 beside expect and when, which fails under the mutation
+  artifact: no specs skip:  37 pass  0 fail
+  signal: silent
+- GraphEdge.repeat was typed number and could not hold the repeat true that the stage says exempts a back edge
+  trigger: when build emits an edge carrying repeat true from an edge object
+  kind: gotcha
+  cause: the types task typed repeat as a bound count while the spec and stage use repeat true
+  resolution: widened GraphEdge.repeat to a required boolean | number and rewrote its TSDoc in the same change
+  artifact: Type 'number | boolean' is not assignable to type 'number | undefined'.
+  signal: loud
 - flatten reports sugar-written inline entries at on.<outcome>, while normalise reports conflicts at the sugar key (onSuccess)
   trigger: when a later step reports a problem inside an inline entry written with sugar
   kind: gotcha
@@ -186,51 +229,3 @@
   resolution: implemented as the spec says and documented; the spec owner should decide whether booleans need an escape or whether removal counting as false is acceptable
   artifact: false removes the key
   signal: silent
-- the const widens string literals, so an outcome-typed field such as expect becomes string and the accepted twin is refused
-  trigger: when building a test entry as a plain const object literal and passing it to defineConfig<T>
-  kind: gotcha
-  cause: TypeScript widens literal properties of an unannotated object literal
-  resolution: annotate the entry as ConfigEntry<T> or inline the literal in the call
-  artifact: Property '$replace' is missing in type
-  signal: loud
-- the index signature must also admit string and boolean for $start and $unattended, so a step id set to a string is not refused
-  trigger: when a flow object mixes reserved $-keys with an index signature of step entries
-  kind: pattern
-  cause: TypeScript checks named properties against the index signature
-  resolution: documented in the TSDoc of FlowEntry; an intersection is not an option because it refuses $start itself
-  signal: silent
-- a non-numeric repeat is refused, but the error names String.prototype.repeat instead of the edge field
-  trigger: when an edge type is a union of string and an object with a repeat field
-  kind: gotcha
-  cause: the object literal is also checked against string's apparent type, which has a repeat method
-  resolution: the error still fires and the test stands; read the message with this in mind
-  artifact: Type 'string' is not assignable to type 'number | ((count: number) => string) | undefined'.
-  signal: silent
-- the runtime assertion's own argument is type-checked against the typed value, so the deliberately wrong twin makes toEqual fail check-types
-  trigger: when a type test passes an object literal typed from a union of literals to expect().toEqual()
-  kind: gotcha
-  cause: bun:test expect<T> infers T from the actual value and checks the expected argument against it
-  resolution: write expect<unknown[]>([...]) for the runtime companion of a refused line
-  artifact: error TS2769: No overload matches this call.
-  signal: loud
-- artifact: PLAN_TRACKER-rafa-2-open-tomato-define-config.md: Property '$layer' is incompatible with index signature.
-- a mapped type with ? on every key made $replace optional, so a replace shape matched objects without the marker
-  trigger: when writing a homomorphic mapped type that needs $replace required and other keys optional
-  kind: pattern
-  cause: a ? on the mapped type applies to every key, including $replace
-  resolution: put the modifiers on the skeleton ({ $replace: 0 } & OptionalKeys<T>) and map over keyof S without modifiers so each key keeps its own
-  signal: silent
-- strip every directive and require the error count to equal the directive count, then apply targeted loosening mutations and require unused-directive errors
-  trigger: when proving @ts-expect-error assertions are not false negatives
-  kind: pattern
-  cause: a passing check-types alone cannot show that each refused line errors for the intended reason
-  resolution: sed out the directives, count error TS lines, restore; perl-edit one rule at a time, run tsc, restore and diff
-  artifact: TS2578: Unused '@ts-expect-error' directive.
-  signal: silent
-- the $replace: true key is checked against the map's index signature and refused
-  trigger: when a $replace object stands in for a keyed map (Record<string, V>)
-  kind: gotcha
-  cause: TS relates every source property, named or not, to the target's string index signature
-  resolution: the replace shape's index signature admits true beside the partial value; the resulting gap is documented in TSDoc
-  artifact: Property '$replace' is incompatible with index signature.
-  signal: loud
