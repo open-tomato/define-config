@@ -1,3 +1,24 @@
+- cycles takes Pick<BuildResult, 'graph' | 'sources'> and returns readonly Diagnostic[]; it reads sources for the closing handler's path and ignores hooks
+  trigger: when reachability or resolveGraph consumes cycles
+  kind: location
+  cause: Graph carries no source paths
+  resolution: call cycles(built) directly with build's result
+  artifact: export function cycles(built: Pick<BuildResult, 'graph' | 'sources'>): readonly Diagnostic[]
+  signal: silent
+- cycles exempts only repeat === true, but the public EdgeTarget type declares repeat?: number, so the only exempting value is a type error for typed flows
+  trigger: when a typed host writes a wanted loop with repeat: true
+  kind: gotcha
+  cause: types.ts was written before the stage fixed repeat: true as the loop marker
+  resolution: left types.ts unchanged as out of scope; the public-surface stage or the spec owner should widen EdgeTarget.repeat to true or boolean | number
+  artifact: repeat?: number;
+  signal: silent
+- the DFS descends the first-declared handler before checking later ones, so a self-loop on a node's second handler is found after the loops deeper down its first handler
+  trigger: when ordering expected cycle diagnostics for a node with several handlers
+  kind: gotcha
+  cause: walk order is depth-first in declaration order, not handler order per node
+  resolution: expect cycle diagnostics in DFS order; the test states why
+  artifact: cycle flows.next.build.on.fail
+  signal: loud
 - artifact: PLAN_TRACKER-rafa-2-open-tomato-define-config.md: function isPlainObject(value: unknown): value is Readonly<Record<string, unknown>>
 - artifact: PLAN_TRACKER-rafa-2-open-tomato-define-config.md: repeat?: number;
 - FlowSummary.start is empty string because the type requires a string
@@ -214,18 +235,4 @@
   cause: a suite that has never been seen failing could be a false negative
   resolution: cp the module to /tmp, sed one rule, run bun test on the file, cp back, and diff to confirm the restore
   artifact: 31 pass  7 fail  <- no $replace
-  signal: silent
-- provenance keys are dot-joined paths as the spec says, so { 'a.b': 1 } and { a: { b: 1 } } both record under a.b and can be reported as duplicates of each other
-  trigger: when a config key itself contains a dot
-  kind: gotcha
-  cause: a dot-joined string cannot tell a dotted key from a nested one
-  resolution: documented on the Provenance type, the same limit types.ts states for Required paths; duplicates.ts will split keys on dots when building diagnostic paths
-  artifact: share a dot-joined path with the nested keys they spell
-  signal: silent
-- the spec rule that false at a key removes it applies to every key at runtime, so a boolean field cannot be set to false: it is deleted
-  trigger: when an entry sets a boolean config field to false, such as { verbose: false }
-  kind: gotcha
-  cause: apply has no schema, so it cannot tell a keyed-map id from a named boolean key; the types allow false for any boolean field
-  resolution: implemented as the spec says and documented; the spec owner should decide whether booleans need an escape or whether removal counting as false is acceptable
-  artifact: false removes the key
   signal: silent
