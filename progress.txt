@@ -1,3 +1,24 @@
+- the repo has no installed git hooks and core.hooksPath is unset
+  trigger: checking for pre-commit hooks before leaving work for the loop's commit
+  kind: location
+  cause: no hook tooling has been set up
+  resolution: none needed; noted so later tasks do not assume a hook runs
+  artifact: .git/hooks contains only *.sample files
+  signal: silent
+- rafa's eslint.base.mjs imports ./scripts/unsafeUnicode.mjs for the ar/no-unsafe-unicode rule, so the config cannot be copied on its own
+  trigger: copying the rafa ESLint config into a repo without rafa's scripts/ directory
+  kind: location
+  cause: the unsafe-unicode rule is a custom 193-line local plugin
+  resolution: dropped the rule block; porting the plugin is a separate decision
+  artifact: import unsafeUnicode from './scripts/unsafeUnicode.mjs';
+  signal: silent
+- bunfig has no pass-with-no-tests option; only the CLI flag --pass-with-no-tests exists
+  trigger: setting [test] passWithNoTests = true in bunfig.toml to make bun test green with zero test files
+  kind: gotcha
+  cause: bun 1.3.14 ignores that bunfig key and still exits 1 when no test files match
+  resolution: added a real colocated src/index.test.ts instead of weakening the test script
+  artifact: error: 0 test files matching **{.test,.spec,_test_,_spec_}.{js,ts,jsx,tsx}
+  signal: loud
 - an empty entry file still gets a valid dist/index.d.ts (export {};) because moduleDetection is force
   trigger: tsc -p tsconfig.build.json on an empty src/index.ts
   kind: pattern
