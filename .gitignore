@@ -3,3 +3,6 @@
 # <<< rafa tracking
 node_modules
 dist
+
+# Loader test fixtures hold a .rafa/ directory on purpose
+!src/loader/fixtures/**/.rafa/

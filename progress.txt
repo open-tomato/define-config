@@ -1,3 +1,24 @@
+- import/order wants import type from '.' before the parent '../' type imports, and a blank line between parent and sibling value-import groups
+  trigger: when a test file in src/<area>/ imports its own index module
+  kind: pattern
+  cause: the eslint import/order config ranks index before parent in the type group and puts parent and sibling in separate groups
+  resolution: follow the lint message ordering
+  artifact: `.` type import should occur before type import of `../graph/types`
+  signal: loud
+- bun test passed while tsc refused the cast from a guarded Record to LayerDir
+  trigger: when copying caller-supplied layer objects through an isRecord type guard
+  kind: gotcha
+  cause: bun test strips types without checking them; the conversion from { [x: string]: unknown } to LayerDir is refused as a TS2352 cast
+  resolution: let the map infer the spread type instead of casting; run check-types, not only bun test
+  artifact: error TS2352: Conversion of type '{ [x: string]: unknown; }' to type 'LayerDir' may be a mistake
+  signal: loud
+- toEqual ignores keys set to undefined, so a result with graph: undefined still matches { config, diagnostics, sources }
+  trigger: when a test checks that an optional result key is absent using toEqual on the whole result
+  kind: gotcha
+  cause: bun's toEqual treats undefined-valued properties as absent; only toStrictEqual or an explicit 'key' in result check notices them
+  resolution: check absence with expect('graph' in result).toBe(false), and prove it can fail by temporarily returning graph: undefined
+  artifact: expect('graph' in result).toBe(false)
+  signal: silent
 - built-in readers always win; a loaders entry for .json/.ts/.mts/.mjs/.js is never called
   trigger: when a host passes loaders['.json'] or a loader keyed by a module extension
   kind: pattern
@@ -209,24 +230,3 @@
   resolution: the tests use only resolving promises; attaching a rejection handler is left as a follow-up decision
   artifact: validated asynchronously; only synchronous validation is supported
   signal: silent
-- PIPESTATUS is empty under zsh, so the echoed exit code was blank rather than 0 or 1
-  trigger: when reading gate exit codes after a pipe in the zsh shell
-  kind: gotcha
-  cause: zsh names the array pipestatus in lowercase, and $? after a pipe is the exit code of tail
-  resolution: run each gate without a pipe and redirect to /dev/null, then read $?
-  artifact: lint exit=
-  signal: silent
-- ESLint rejects an implicit arrow return that starts on the next line, and the dangling close paren of the call
-  trigger: when writing a multi-line arrow body as flatMap(([a, b]) =>\n  expr) in this repo
-  kind: gotcha
-  cause: the shared rules enforce beside-style arrow bodies and function-paren-newline
-  resolution: use a block body with a named local helper and an explicit return
-  artifact: Expected no linebreak before this expression  @stylistic/implicit-arrow-linebreak
-  signal: loud
-- unlabelled entries share one implicit layer, so overlapping keys emit a duplicate-key warning even in the spec's first and third examples
-  trigger: when writing merge examples with unlabelled entries that overlap on a key
-  kind: gotcha
-  cause: same-layer detection treats all entries without $layer as one layer
-  resolution: assert only the diagnostic under test, e.g. filter by code, rather than expecting an empty diagnostics array
-  artifact: is set more than once within one layer: the unlabelled layer
-  signal: loud
