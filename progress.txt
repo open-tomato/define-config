@@ -1,3 +1,24 @@
+- the quotes rule has no avoidEscape, so a double-quoted string holding single quotes is a lint error
+  trigger: when a string in a test contains single quotes
+  kind: gotcha
+  cause: @stylistic/quotes set to single without avoidEscape
+  resolution: escape the inner quotes inside a single-quoted string
+  artifact: Strings must use singlequote  @stylistic/quotes
+  signal: loud
+- Array.prototype.reduce skips the holes of a sparse array, so a missing entry would be skipped silently and indexes would still look correct
+  trigger: when iterating the entries array to apply each one
+  kind: pattern
+  cause: reduce visits only present indices
+  resolution: use an index for loop so apply refuses the hole under its position
+  artifact: entry 1: expected a plain object, got undefined
+  signal: silent
+- merge([{a:{x:1,y:2}}, {a:{y:3,z:4}}]) returns the spec value but also one duplicate-key warn at a.y; the $replace example also warns at a
+  trigger: when merging the spec's DoD examples with default options
+  kind: gotcha
+  cause: unlabelled entries share one implicit layer, and a $replace or new map at a path records a set there, so default 'warn' fires
+  resolution: assert only the value for those examples, or give the entries distinct $layer or duplicates: 'allow' when a test expects no diagnostics
+  artifact: is set more than once within one layer: the unlabelled layer (entries 0, 1)
+  signal: loud
 - provenance records a set at 'a.x', but the merged value has no nested a.x, so no drop can be found
   trigger: when an entry uses a dotted key such as { 'a.x': 1 }
   kind: gotcha
@@ -227,25 +248,4 @@
   cause: the unsafe-unicode rule is a custom 193-line local plugin
   resolution: dropped the rule block; porting the plugin is a separate decision
   artifact: import unsafeUnicode from './scripts/unsafeUnicode.mjs';
-  signal: silent
-- bunfig has no pass-with-no-tests option; only the CLI flag --pass-with-no-tests exists
-  trigger: setting [test] passWithNoTests = true in bunfig.toml to make bun test green with zero test files
-  kind: gotcha
-  cause: bun 1.3.14 ignores that bunfig key and still exits 1 when no test files match
-  resolution: added a real colocated src/index.test.ts instead of weakening the test script
-  artifact: error: 0 test files matching **{.test,.spec,_test_,_spec_}.{js,ts,jsx,tsx}
-  signal: loud
-- an empty entry file still gets a valid dist/index.d.ts (export {};) because moduleDetection is force
-  trigger: tsc -p tsconfig.build.json on an empty src/index.ts
-  kind: pattern
-  cause: moduleDetection force treats every file as a module
-  resolution: no export {} needed in the scaffold
-  artifact: export {};
-  signal: silent
-- bun blocks the unrs-resolver postinstall script; the rafa checkout has the same blocked script
-  trigger: bun install with the eslint-import-resolver-typescript devDependency
-  kind: gotcha
-  cause: bun does not trust lifecycle scripts by default
-  resolution: left blocked, same as rafa
-  artifact: ./node_modules/unrs-resolver @1.12.2
   signal: silent
