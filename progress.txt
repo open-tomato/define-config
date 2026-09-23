@@ -1,3 +1,26 @@
+- artifact: PLAN_TRACKER-rafa-2-open-tomato-define-config.md: dist/loader/fixtures/acceptance/project/rafa.config.d.ts
+- artifact: PLAN_TRACKER-rafa-2-open-tomato-define-config.md: "language": "markdown/commonmark"
+- the figure varies about sevenfold between runs (0.34 to 2.53 ms), and full-suite runs mostly read lower than the file run alone although no other file imports the fixture
+  trigger: when reading the createLoader load time from the acceptance test
+  kind: pattern
+  cause: not measured; most likely runtime warmth rather than module cache
+  resolution: recorded all seven readings instead of quoting one number
+  artifact: createLoader load:
+  signal: silent
+- the tarball includes a declaration emitted for a loader test fixture, and check-pack passes
+  trigger: when running npm publish --dry-run after bun run build
+  kind: gotcha
+  cause: tsconfig.build.json excludes src/**/*.test.ts but not src/loader/fixtures/**; check-pack asserts required files are present, not that unexpected ones are absent
+  resolution: reported; listed as an optional pre-publish fix in the close-out
+  artifact: dist/loader/fixtures/acceptance/project/rafa.config.d.ts
+  signal: silent
+- @eslint/markdown runs in markdown/commonmark language mode with no code-block processor, so fenced ts blocks are never parsed; a fence holding a syntax error lints clean
+  trigger: when relying on bun run lint to check README ts examples
+  kind: gotcha
+  cause: eslint.config.mjs applies markdown/recommended to **/*.md, which lints Markdown structure only
+  resolution: reported; enabling the markdown processor for ts fences would be a separate task
+  artifact: "language": "markdown/commonmark"
+  signal: silent
 - artifact: PLAN_TRACKER-rafa-2-open-tomato-define-config.md: Typed config arrays with id-keyed merge
 - artifact: PLAN_TRACKER-rafa-2-open-tomato-define-config.md: extends: ['markdown/recommended']
 - extract each fenced ts block, rewrite the package import to ../src/index, run tsc with a tsconfig extending the repo one, then execute each block and compare output to the comments
@@ -199,23 +222,3 @@
   signal: loud
 - artifact: PLAN_TRACKER-rafa-2-open-tomato-define-config.md: function isPlainObject(value: unknown): value is Readonly<Record<string, unknown>>
 - artifact: PLAN_TRACKER-rafa-2-open-tomato-define-config.md: repeat?: number;
-- FlowSummary.start is empty string because the type requires a string
-  trigger: when a flow has no step entry and no resolvable $start
-  kind: gotcha
-  cause: FlowSummary.start is typed string, not optional
-  resolution: documented in the build.ts TSDoc; reachability should treat an empty start as no start
-  artifact: start: ''
-  signal: silent
-- build returns sources (path and implicit flag per node key) and hooks (flow, node, anchor, position) beside the graph; when hooks are not edges
-  trigger: when reachability or cycles read build output
-  kind: location
-  cause: Graph has no field for a when placement or for the path an entry was written at
-  resolution: read BuildResult.sources for diagnostic paths and BuildResult.hooks for when anchors
-  artifact: export interface GraphHook
-  signal: silent
-- build makes an implicit node for it, as it does for handler targets, so every hook anchor and edge endpoint is a key of graph.nodes
-  trigger: when a when anchor names a registered step that has no entry in the flow
-  kind: pattern
-  cause: the stage text mentions implicit nodes only for handler targets and defines unknown-step only for an anchor that exists nowhere
-  resolution: documented in the module TSDoc; the node's NodeSource is implicit true at the when path, and reachability must not report implicit nodes as unreachable entries
-  signal: silent

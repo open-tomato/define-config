@@ -45,10 +45,11 @@ bun run build
 ```
 
 **Gate behavior notes:**
-- `bun run lint` runs ESLint over `src/`, `scripts/`, and root-level files. Ignores `dist/`, `node_modules/`, `.claude/`, `.rafa/`.
+- `bun run lint` runs ESLint over `src/`, `scripts/`, and root-level files. Ignores `dist/`, `node_modules/`, `.claude/`, `.rafa/`. `.md` files get `markdown/recommended` with no code-block processor, so fenced `ts` blocks in `README.md` are never parsed: no gate checks README examples. Verify them by extracting each block and running `tsc` against `src/index.ts` (use a non-dot temp dir; `tsc` include globs skip dot-directories).
 - `bun run check-types` includes test files; `@ts-expect-error` in a test is a real type assertion.
 - `bun test` discovers and runs `**/*.test.ts` files in parallel.
-- `bun run build` removes `dist/`, bundles to ESM, and emits TypeScript declarations.
+- `bun run build` removes `dist/`, bundles to ESM, and emits TypeScript declarations. `tsconfig.build.json` excludes only `src/**/*.test.ts`, so `.ts` files under `src/loader/fixtures/` also get declarations in `dist/` and ship in the tarball.
+- `bun run check-pack` asserts the required files are in the pack and the manifest has no `dependencies`; it does not refuse unexpected files, so it passes with the fixture declarations above.
 
 ## ESLint Style Law for Agent Sessions
 
@@ -130,11 +131,3 @@ Write tests first (RED), implement to pass (GREEN), refactor (IMPROVE), verify c
 - **build-error-resolver** — When `bun run build` or `bun run check-types` fails
 
 **Agent-harness prose** — `.claude/agents/` and `.claude/skills/` are not lint targets; they are vendored from the umbrella and named here for reference.
-
-## Next Steps in Plan
-
-After this task completes:
-1. Rewrite the repo-specific paragraphs in `.claude/agents/loop-implementer.md`, `tdd-guide.md`, and `doc-updater.md` to reference this `AGENTS.md`, the four gates, and `src/` layout.
-2. Add `scripts/pack-check.ts` — dry-run pack validator for manifest and dist files.
-3. Begin Types and Diagnostics stage (core library implementation).
-
