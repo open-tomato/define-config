@@ -1,3 +1,18 @@
+- NOTICE said the package redistributes no third-party source file, and that became false
+  trigger: vendoring third-party source
+  kind: location
+  cause: the same-commit doc rule applies to NOTICE
+  resolution: rewrote the sentence and appended the MIT text
+  artifact: redistributes no
+    third-party source file
+  signal: silent
+- the implicit-arrow-linebreak rule rejects an arrow body that starts on the next line
+  trigger: writing a multi-line ternary as an arrow body in a test
+  kind: gotcha
+  cause: the arrow-function style is 'beside', so the body must start on the same line as the arrow
+  resolution: move the logic into a named function that uses early returns
+  artifact: Expected no linebreak before this expression  @stylistic/implicit-arrow-linebreak
+  signal: loud
 - spec lists 9 codes; plan adds handler-conflict and load-failed (handler-conflict also appears in the spec risks section)
   trigger: when choosing diagnostic codes
   kind: location
