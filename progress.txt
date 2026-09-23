@@ -1,3 +1,24 @@
+- reachability reads the build result's graph, sources and hooks directly and returns a readonly Diagnostic list
+  trigger: when resolveGraph wires reachability in src/graph/index.ts
+  kind: location
+  cause: Graph carries neither source paths nor hooks
+  resolution: call reachability(built) with build's result, beside cycles(built)
+  artifact: export function reachability(built: Pick<BuildResult, 'graph' | 'sources' | 'hooks'>): readonly Diagnostic[]
+  signal: silent
+- only non-implicit nodes are reported as unreachable, because the rule speaks of entries; a reached implicit interactive node is still reported at the handler that named it
+  trigger: when an implicit registry-only node hangs off an unreachable entry
+  kind: pattern
+  cause: an implicit node has no entry, and its source path is its first reference
+  resolution: check sources[key].implicit before warning
+  artifact: source?.implicit === true
+  signal: silent
+- build sets FlowSummary.start to empty string, so reachability skips the flow instead of warning about every entry
+  trigger: when a flow's $start names a step that is neither an entry nor registered
+  kind: gotcha
+  cause: build already reports unknown-step at flows.<flow>.$start, and warning about every entry on top of it would bury that error
+  resolution: reachability returns no diagnostics for a flow whose start is empty; documented in the module TSDoc and covered by a test
+  artifact: if (flow.start === '') {
+  signal: silent
 - cycles takes Pick<BuildResult, 'graph' | 'sources'> and returns readonly Diagnostic[]; it reads sources for the closing handler's path and ignores hooks
   trigger: when reachability or resolveGraph consumes cycles
   kind: location
@@ -214,25 +235,4 @@
   cause: apply records set only when it starts a new map, not when it merges into one
   resolution: duplicates filters kind 'remove' and skips the root path ''
   artifact: touch.kind === 'remove'
-  signal: silent
-- reduce without an explicit type argument infers unknown for the accumulator; bun test passes but check-types fails
-  trigger: when typing a reduce over readonly unknown[] entries into MergeState in a test helper
-  kind: gotcha
-  cause: the initial value overload is not chosen when the element type is unknown
-  resolution: write entries.reduce<MergeState>(...) as apply.test.ts does
-  artifact: error TS2571: Object is of type 'unknown'.
-  signal: loud
-- building each result object with Object.fromEntries defines own properties, so a __proto__ key from JSON.parse stays a key and does not change the prototype
-  trigger: when building merged objects from keys found in untrusted entries
-  kind: pattern
-  cause: assigning result[key] with key __proto__ calls the prototype setter
-  resolution: collect keys in a Map and finish with Object.fromEntries; a test checks the prototype and that no pollution leaks
-  artifact: Object.fromEntries(result)
-  signal: silent
-- breaking one rule at a time in a scratch copy of the module (sed on a copy, run the tests, restore from backup) shows each rule has a test that can fail
-  trigger: when a test file passes on its first run
-  kind: pattern
-  cause: a suite that has never been seen failing could be a false negative
-  resolution: cp the module to /tmp, sed one rule, run bun test on the file, cp back, and diff to confirm the restore
-  artifact: 31 pass  7 fail  <- no $replace
   signal: silent
