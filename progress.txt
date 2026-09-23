@@ -1,3 +1,24 @@
+- provenance records a set at 'a.x', but the merged value has no nested a.x, so no drop can be found
+  trigger: when an entry uses a dotted key such as { 'a.x': 1 }
+  kind: gotcha
+  cause: provenance paths are dot-joined, the same limit apply and ConfigEntry already document
+  resolution: report without an entry, with the message 'absent from the merged value'
+  artifact: is required but absent from the merged value
+  signal: silent
+- a non-map value above a required path also drops it, which the task text (false or $replace only) does not mention
+  trigger: when a later entry overwrites a parent key with a scalar or array
+  kind: gotcha
+  cause: apply records a plain set at the parent, which drops the whole subtree below it
+  resolution: name that entry as the dropper, with the message 'set a to a value that is not a map'
+  artifact: set a to a value that is not a map
+  signal: silent
+- a set or replace record at the required path itself can never come after the path's last set, so only false at the path and records at keys above it can drop it
+  trigger: when deciding which provenance records drop a required path
+  kind: pattern
+  cause: apply records set or replace at the path whenever it writes the path, so any such record counts toward the last set
+  resolution: filter records to entry > lastSet over the path and its prefixes, and treat every surviving record as a drop
+  artifact: 26 pass  0 fail <- self replace counts
+  signal: silent
 - breaking one rule at a time with sed on the module and rerunning the file showed each rule has a test that can fail
   trigger: when a test file passes on its first run
   kind: pattern
@@ -228,10 +249,3 @@
   resolution: left blocked, same as rafa
   artifact: ./node_modules/unrs-resolver @1.12.2
   signal: silent
-- bun test exits 1 when no test file matches, so the test gate cannot be green on an empty scaffold
-  trigger: running bun test on a scaffold with no test files
-  kind: gotcha
-  cause: bun treats zero matching test files as an error
-  resolution: the next task needs at least one test file (or another fix) to make bun test green
-  artifact: error: 0 test files matching **{.test,.spec,_test_,_spec_}.{js,ts,jsx,tsx}
-  signal: loud
