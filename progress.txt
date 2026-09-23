@@ -1,3 +1,24 @@
+- breaking one rule at a time with sed on the module and rerunning the file showed each rule has a test that can fail
+  trigger: when a test file passes on its first run
+  kind: pattern
+  cause: a suite never seen failing could be a false negative
+  resolution: back up to /tmp, sed one rule, run bun test on the file, restore, and diff to confirm
+  artifact: entry counted twice          19 pass  1 fail
+  signal: silent
+- set and replace count as setting and remove does not; a map merged into an existing map records nothing at its own path, so only shared leaves collide
+  trigger: when deciding which provenance kinds count as setting a path
+  kind: pattern
+  cause: apply records set only when it starts a new map, not when it merges into one
+  resolution: duplicates filters kind 'remove' and skips the root path ''
+  artifact: touch.kind === 'remove'
+  signal: silent
+- reduce without an explicit type argument infers unknown for the accumulator; bun test passes but check-types fails
+  trigger: when typing a reduce over readonly unknown[] entries into MergeState in a test helper
+  kind: gotcha
+  cause: the initial value overload is not chosen when the element type is unknown
+  resolution: write entries.reduce<MergeState>(...) as apply.test.ts does
+  artifact: error TS2571: Object is of type 'unknown'.
+  signal: loud
 - building each result object with Object.fromEntries defines own properties, so a __proto__ key from JSON.parse stays a key and does not change the prototype
   trigger: when building merged objects from keys found in untrusted entries
   kind: pattern
