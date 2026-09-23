@@ -39,9 +39,10 @@ export interface MergeOptions {
 /** What {@link merge} returns. */
 export interface MergeResult {
   /**
-   * The merged value: a new object sharing no object or array with any
-   * entry. Reserved keys (`$replace` anywhere, `$layer` on an entry) never
-   * reach it.
+   * The merged value: a new object sharing no plain object or array with
+   * any entry. Functions and class instances (a `Date`, a `Map`) are values
+   * kept by reference. Reserved keys (`$replace` anywhere, `$layer` on an
+   * entry) never reach it.
    */
   readonly value: Readonly<Record<string, unknown>>;
   /**

@@ -24,10 +24,13 @@ export type EdgeTarget =
     /** The id of the step entry the edge goes to. */
     to: string;
     /**
-     * How many times this edge may be taken in one run of the flow, for an
-     * edge that loops back to an earlier step entry.
+     * `true` marks an edge that loops back to an earlier step entry as a
+     * wanted loop, so `resolveGraph` reports no `cycle` for it. A number
+     * (how many times the host lets the edge be taken in one run) is kept
+     * on the {@link GraphEdge} for the host, but does not mark the loop:
+     * only `true` does.
      */
-    repeat?: number;
+    repeat?: boolean | number;
   };
 
 /** What a step entry does on an outcome: follow an edge to its target. */

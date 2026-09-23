@@ -63,13 +63,25 @@ console.log(result.value);
 
 const withRequired = merge(
   [
-    { a: { x: 1 } },
-    { a: { $replace: true, z: 4 } },
+    { $layer: 'defaults', a: { x: 1 } },
+    { $layer: 'project', a: { $replace: true, z: 4 } },
   ],
-  { required: ['a.x'] }
+  { required: ['a.x'] },
 );
-// diagnostics: [{ level: 'error', code: 'required-dropped', path: ['a', 'x'] }]
+
+console.log(withRequired.value);
+// { a: { z: 4 } }
+
+console.log(withRequired.diagnostics);
+// [{ level: 'error', code: 'required-dropped', path: ['a', 'x'],
+//    message: 'a.x is required but was dropped: entry 1 replaced a with $replace', entry: 1 }]
 ```
+
+The two entries sit in different layers. Without the `$layer` labels they would share the implicit
+layer, and entry 1 setting `a` again would also produce a `duplicate-key` warning at `a`.
+
+The merged value never shares a plain object or an array with an entry, and no entry is changed.
+Functions and class instances (a `Date`, a `Map`) are values: they are kept by reference.
 
 ## validate
 
@@ -91,8 +103,13 @@ const value = { name: 'app', port: '8000' };
 const diagnostics = validate(value, schema);
 
 console.log(diagnostics[0]);
-// { level: 'error', code: 'schema', path: ['port'], message: 'Expected number…' }
+// { level: 'error', code: 'schema', path: ['port'],
+//   message: 'Invalid input: expected number, received string' }
 ```
+
+Validation is synchronous: a schema whose `validate` returns a Promise makes `validate` throw a
+`TypeError`. `validateSections(value, [[path, schema], …])` validates the subtree at each path
+with its own schema and prefixes each diagnostic's path with that section's path.
 
 ## resolveGraph
 
@@ -106,7 +123,7 @@ by step id.
 | `onFalse: id` | `on: { false: id }` |
 | `onSuccess: id` | `on: { success: id }` |
 | `onFail: id` | `on: { fail: id }` |
-| `onChoice: id` | `on: { choice: id }` (for interactive steps) |
+| `onChoice: { <name>: id, … }` | `on: { <name>: id, … }`: each key is an outcome (for interactive steps) |
 
 ```ts
 import { resolveGraph } from '@open-tomato/define-config';
@@ -133,49 +150,70 @@ console.log(result.graph.edges);
 ```
 
 A `repeat: true` edge marks a loop as intentional; without it, a back edge yields a `cycle` error.
+Only `true` marks the loop: a number for `repeat` is kept on the edge for the host, and the back
+edge is still a `cycle`.
 
 ```ts
-const flow = {
+import { resolveGraph } from '@open-tomato/define-config';
+
+const flows = {
   retry: {
     $start: 'attempt',
     attempt: { onFail: { to: 'attempt', repeat: true } },
   },
 };
 
-const graph = resolveGraph(flow, {
+const looped = resolveGraph(flows, {
   attempt: { outcomes: ['success', 'fail'] },
 });
-// diagnostics: [] (loop is allowed)
+
+console.log(looped.diagnostics);
+// [] (the loop is marked, so no cycle)
+
+console.log(looped.graph.edges);
+// [{ from: 'retry.attempt', outcome: 'fail', to: 'retry.attempt', repeat: true }]
 ```
 
 ## createLoader
 
-Find, read, merge, validate and resolve the config files of each layer. The loader runs each file
-path through your `loaders` to fetch its content, hands the results to `merge` and `validate`, and
-returns the merged value with every diagnostic found.
+Find, read, merge, validate and resolve the config files of each layer. For each layer, in order
+(lowest precedence first), the loader tries the `lookup` names in the layer's directory and keeps
+the first one that is a file. It reads `.ts`, `.mts`, `.mjs` and `.js` through `import()` (the
+`default` export) and `.json` through `JSON.parse`. Any other extension goes to the host reader in
+`loaders`, keyed by the extension with its dot and called with the file's text and path. Every
+entry read is tagged with its layer's `$layer`. The entries are merged with `required` and
+`duplicates` and validated with `schema`, and when `steps` is given the merged `flows` section is
+resolved into `graph`. The lookup names below are only an example: the library knows no file
+names of its own.
 
 ```ts
+import { homedir } from 'node:os';
+
 import { createLoader } from '@open-tomato/define-config';
 import { z } from 'zod';
 
 const schema = z.object({
   name: z.string(),
-  steps: z.record(z.object({ run: z.string() })),
+  steps: z.record(z.string(), z.object({ run: z.string() })),
 });
 
 const loader = createLoader({
-  loaders: {
-    async json(path) {
-      const text = await Bun.file(path).text();
-      return JSON.parse(text);
-    },
-  },
+  lookup: ['rafa.config.ts', '.rafa/config.yaml'],
+  layers: [
+    { layer: 'user', dir: homedir() },
+    { layer: 'project', dir: '.' },
+  ],
+  schema,
+  loaders: { '.yaml': (text) => Bun.YAML.parse(text) },
 });
 
-const result = await loader.load(['rafa.config.json'], schema);
-console.log(result.value);
-// the merged config
+const { config, diagnostics, sources } = await loader.load(process.cwd());
+// config: the merged value; diagnostics: every problem, in stage order;
+// sources: [{ layer, path }] for each layer that had a file, with an absolute path
 ```
+
+A relative `dir` resolves against the directory passed to `load`. A file that cannot be read
+yields a `load-failed` error and its layer contributes nothing; `load` still returns the rest.
 
 ## Diagnostic Codes
 
@@ -184,24 +222,27 @@ surface diagnostics as lint squiggles.
 
 | Code | Level | When it fires |
 |------|-------|---------------|
-| `duplicate-key` | error / warn | Two entries of the same `$layer` set the same key path. The level is chosen by the `duplicates` option to `merge`. |
+| `duplicate-key` | warn / error | In `merge`: two entries of the same `$layer` set the same key path; the `duplicates` option picks the level (`warn` by default) or turns the check off. In `resolveGraph` (always an error): an inline entry's generated id `<parent>.<outcome>` equals an id already in the flow. |
 | `required-dropped` | error | A dot-joined path from `merge`'s `required` option is absent in the merged value. |
-| `handler-conflict` | error | A step entry has conflicting handlers: e.g. both `onSuccess` and `on.success` under `resolveGraph`. |
-| `unknown-step` | error | A referenced step name is not in the step registry passed to `resolveGraph`. |
+| `handler-conflict` | error | A step entry carries `on` beside a sugar key, or two sugar keys name one outcome (such as `onTrue` and `onChoice.true`). |
+| `unknown-step` | error | A step entry's step is not in the registry passed to `resolveGraph`, or a handler target, `when:` anchor or `$start` names neither a step entry of the flow nor a registered step. |
 | `unknown-outcome` | error | A handler names an outcome the step does not declare in the registry. |
 | `impure-when` | error | A `when:` placement is on a step not registered as `pure: true`. |
 | `cycle` | error | An edge closes a loop in the flow and is not marked `repeat: true`. |
 | `interactive-unattended` | error | An `$unattended` flow reaches an interactive step (registered with `interactive: true`). |
 | `unreachable` | warn | A step entry is never reached when walking the flow from its `$start`. |
 | `schema` | error | A Standard Schema V1 validation issue. |
-| `load-failed` | error | The loader failed to load or read a file, or one of the layers failed to merge or validate. |
+| `load-failed` | error | The loader found a file it could not read: no reader for its extension, `import()` or the reader threw, no `default` export, or a value that is not an entry or an array of entries. |
 
 ## Config as Code
 
-A config file is code that runs at load; the host owns the rule for which files it imports. Never
-trust config from untrusted sources: always validate the loaded config against your schema.
+A config file is code that runs at load; the host owns the rule for which files it imports.
+Validating the loaded value with a schema checks its shape, but the file's code has already run by
+then, so a schema is no guard against a file the host should not have imported.
 
 ## Module Cache
 
-This library caches no state: every function is pure and idempotent. Call `merge`, `validate` or
-`resolveGraph` as often as you need without side effects.
+The library caches nothing: every `load` looks up and reads the files again. The runtime's module
+cache still applies to `import()`, so a `.ts`, `.mts`, `.mjs` or `.js` config file already imported
+in this process yields the module it loaded first, even when the file has changed since. `.json`
+files and files read through `loaders` are read afresh on every `load`.

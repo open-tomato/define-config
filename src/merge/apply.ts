@@ -216,8 +216,9 @@ function extend(
 /**
  * Apply one entry onto the merged state, by the rules in this module's
  * description, and return the new state. Nothing is mutated: the result is
- * a new value and a new provenance map. Every object and array the result
- * takes from `entry` is a copy; subtrees of `state.value` the entry does
+ * a new value and a new provenance map. Every plain object and array the
+ * result takes from `entry` is a copy, while functions and class instances
+ * are kept by reference; subtrees of `state.value` the entry does
  * not touch are shared with the new value by reference, which is safe
  * because no step of the merge mutates a value.
  *

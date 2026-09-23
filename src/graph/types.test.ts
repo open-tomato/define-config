@@ -33,11 +33,21 @@ describe('StepEntry', () => {
     expect<unknown[]>([bad.when, good.when]).toEqual(['during:lint', 'after:lint']);
   });
 
-  test('refuses a non-numeric repeat on an edge object', () => {
-    // @ts-expect-error `repeat` is a number
+  test('accepts repeat: true or a number on an edge object and refuses a string', () => {
+    // @ts-expect-error `repeat` is a boolean or a number
     const bad: EdgeTarget = { to: 'build', repeat: 'twice' };
-    const good: EdgeTarget = { to: 'build', repeat: 2 };
-    expect<unknown[]>([bad, good]).toEqual([{ to: 'build', repeat: 'twice' }, { to: 'build', repeat: 2 }]);
+    const marked: EdgeTarget = { to: 'build', repeat: true };
+    const counted: EdgeTarget = { to: 'build', repeat: 2 };
+    expect<unknown[]>([bad, marked, counted]).toEqual([
+      { to: 'build', repeat: 'twice' },
+      { to: 'build', repeat: true },
+      { to: 'build', repeat: 2 },
+    ]);
+  });
+
+  test('types the repeat: true loop mark inside a step entry', () => {
+    const entry: StepEntry<Outcomes> = { onFail: { to: 'attempt', repeat: true } };
+    expect(entry.onFail).toEqual({ to: 'attempt', repeat: true });
   });
 
   test('passes any other key through as a step option', () => {
