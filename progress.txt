@@ -1,3 +1,10 @@
+- the const widens string literals, so an outcome-typed field such as expect becomes string and the accepted twin is refused
+  trigger: when building a test entry as a plain const object literal and passing it to defineConfig<T>
+  kind: gotcha
+  cause: TypeScript widens literal properties of an unannotated object literal
+  resolution: annotate the entry as ConfigEntry<T> or inline the literal in the call
+  artifact: Property '$replace' is missing in type
+  signal: loud
 - the index signature must also admit string and boolean for $start and $unattended, so a step id set to a string is not refused
   trigger: when a flow object mixes reserved $-keys with an index signature of step entries
   kind: pattern
