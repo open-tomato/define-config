@@ -46,7 +46,8 @@
     "prepack": "bun run build",
     "test": "bun test",
     "lint": "eslint .",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "check-pack": "bun run scripts/pack-check.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

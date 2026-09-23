@@ -1,3 +1,23 @@
+- frontmatter description still referenced context/ pages
+  trigger: when reading doc-updater.md description
+  kind: location
+  artifact: AGENTS.md maps, `context/` pages, READMEs
+  signal: loud
+- Verification section referenced rafa-specific paths and control-byte scripts
+  trigger: when reading doc-updater.md before edits
+  kind: location
+  artifact: bun run gate:control-bytes / context-page-imports.test.ts
+  signal: loud
+- gates section titled 'Rafa Gates' with env var and old commands
+  trigger: when reading tdd-guide.md before edits
+  kind: location
+  artifact: ## Rafa Gates / env -u CLAUDECODE bun test
+  signal: loud
+- gates section referenced old rafa gates (bunx tsc, bunx eslint)
+  trigger: when reading loop-implementer.md before edits
+  kind: location
+  artifact: Run the gates this repo needs — `bun test`, `bunx tsc --noEmit`, `bunx eslint .`
+  signal: loud
 - umbrella AGENTS.md has lines up to 454 chars due to markdown tables; define-config AGENTS.md has max 231 chars
   trigger: checking wrap width consistency
   kind: gotcha
