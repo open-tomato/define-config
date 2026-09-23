@@ -1,3 +1,31 @@
+- built-in readers always win; a loaders entry for .json/.ts/.mts/.mjs/.js is never called
+  trigger: when a host passes loaders['.json'] or a loader keyed by a module extension
+  kind: pattern
+  cause: the plan routes only extensions without a built-in reader to loaders[ext]
+  resolution: documented in the module TSDoc and pinned by a test; createLoader may later choose to refuse such keys
+  artifact: a loaders entry for .json is not used: JSON is always read built in
+  signal: silent
+- tsconfig.build.json includes all of src/ except *.test.ts, so fixture .ts files would get declarations emitted into dist/
+  trigger: when the acceptance task adds .ts fixtures under src/loader/fixtures/
+  kind: location
+  cause: the build include is src with only src/**/*.test.ts excluded
+  resolution: exclude src/loader/fixtures from tsconfig.build.json (and from lint import/no-unresolved as the plan says) when fixtures land
+  artifact: "exclude": ["node_modules", "dist", "src/**/*.test.ts"]
+  signal: silent
+- the rejection value is a BuildMessage, not an Error instance
+  trigger: when import() of a .ts or .mjs file with a syntax error rejects under Bun
+  kind: gotcha
+  cause: Bun's transpiler reports compile errors as BuildMessage objects
+  resolution: read the reason from any object carrying a message property instead of requiring instanceof Error
+  artifact: syntax BuildMessage Unexpected ;
+  signal: silent
+- Bun's module cache returns the first-loaded module, and the very same default object, for a path already imported
+  trigger: when a module config path is imported twice in one process after the file changed
+  kind: gotcha
+  cause: import() of an already-loaded URL is served from the runtime module cache
+  resolution: readSource copies each entry when adding $layer instead of mutating it; a test pins the cache behaviour for the README to document
+  artifact: cache [{"n":1}] [{"n":1}] true
+  signal: silent
 - an EACCES assertion can pass vacuously if the process runs as root
   trigger: testing a permission-denied stat path with chmod 000
   kind: pattern
@@ -201,39 +229,4 @@
   cause: same-layer detection treats all entries without $layer as one layer
   resolution: assert only the diagnostic under test, e.g. filter by code, rather than expecting an empty diagnostics array
   artifact: is set more than once within one layer: the unlabelled layer
-  signal: loud
-- a chain written as `fc\n  .array(` is not matched by a single-line rewrite
-  trigger: when regex-renaming fc.x to x across a multi-line chain
-  kind: gotcha
-  cause: the receiver and method are on different lines
-  resolution: fix the leftover `fc` by hand after the rewrite
-  artifact: 'fc' is not defined
-  signal: loud
-- ESLint warns import/no-named-as-default-member for every fc.* call
-  trigger: when importing fast-check as a default import in a test
-  kind: gotcha
-  cause: fast-check exposes named exports, the lint config flags member access on the default import
-  resolution: use named imports from 'fast-check'
-  artifact: Caution: `fc` also has a named export
-  signal: loud
-- the quotes rule has no avoidEscape, so a double-quoted string holding single quotes is a lint error
-  trigger: when a string in a test contains single quotes
-  kind: gotcha
-  cause: @stylistic/quotes set to single without avoidEscape
-  resolution: escape the inner quotes inside a single-quoted string
-  artifact: Strings must use singlequote  @stylistic/quotes
-  signal: loud
-- Array.prototype.reduce skips the holes of a sparse array, so a missing entry would be skipped silently and indexes would still look correct
-  trigger: when iterating the entries array to apply each one
-  kind: pattern
-  cause: reduce visits only present indices
-  resolution: use an index for loop so apply refuses the hole under its position
-  artifact: entry 1: expected a plain object, got undefined
-  signal: silent
-- merge([{a:{x:1,y:2}}, {a:{y:3,z:4}}]) returns the spec value but also one duplicate-key warn at a.y; the $replace example also warns at a
-  trigger: when merging the spec's DoD examples with default options
-  kind: gotcha
-  cause: unlabelled entries share one implicit layer, and a $replace or new map at a path records a set there, so default 'warn' fires
-  resolution: assert only the value for those examples, or give the entries distinct $layer or duplicates: 'allow' when a test expects no diagnostics
-  artifact: is set more than once within one layer: the unlabelled layer (entries 0, 1)
   signal: loud

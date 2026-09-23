@@ -1,0 +1,289 @@
+/**
+ * `createLoader`: the one convenience of the library. It finds each
+ * layer's config file, reads it, and runs the stages over what it read:
+ *
+ * 1. `./lookup` finds the first `lookup` name that is a file in each
+ *    layer's directory (a relative `dir` resolves against `cwd`); a layer
+ *    with none contributes no source;
+ * 2. `./read` reads each source by extension into entries tagged with
+ *    `$layer`; a source it cannot read yields one `load-failed` error and
+ *    its layer is skipped;
+ * 3. `merge` applies every entry read, layer order then file order, with
+ *    the host's `required` and `duplicates`;
+ * 4. `validate` runs the host's `schema` over the merged value, when one
+ *    is given;
+ * 5. `resolveGraph` resolves the merged `flows` section against the host's
+ *    `steps`, when a registry is given.
+ *
+ * Nothing is cached: every `load` looks up and reads the files again. The
+ * runtime's module cache still applies to `import()`, so a module source
+ * already imported in this process yields the module it loaded first.
+ *
+ * A config file read through `import()` is code, and it runs when it is
+ * loaded; which files to trust is the host's decision.
+ *
+ * @module
+ */
+
+import type { Diagnostic } from '../diagnostics';
+import type { Graph, StepRegistry } from '../graph/types';
+import type { DuplicatesOption } from '../merge/duplicates';
+import type { StandardSchemaV1 } from '../standard-schema';
+import type { SchemaSection } from '../validate';
+import type { LayerDir, Source } from './lookup';
+import type { Loaders, TaggedEntry } from './read';
+
+import { resolveGraph } from '../graph';
+import { merge } from '../merge';
+import { validate, validateSections } from '../validate';
+
+import { findSources } from './lookup';
+import { readSource } from './read';
+
+export type { LayerDir, Source } from './lookup';
+export type { Loader, Loaders } from './read';
+
+/** Options accepted by {@link createLoader} and {@link load}. */
+export interface LoaderOptions {
+  /**
+   * File names to try in each layer directory, first match wins. A name may
+   * hold a subpath, such as `.rafa/config.yaml`.
+   */
+  readonly lookup: readonly string[];
+  /**
+   * Layers in order, lowest precedence first: a label and the directory to
+   * look in. A relative `dir` resolves against the `cwd` given to `load`.
+   */
+  readonly layers: readonly LayerDir[];
+  /**
+   * What the merged value must satisfy: one Standard Schema V1 schema over
+   * the whole value, or `[path, schema]` sections each validated over the
+   * subtree at `path`. When absent, nothing is validated.
+   */
+  readonly schema?: StandardSchemaV1 | readonly SchemaSection[];
+  /**
+   * The host's step registry. When given, the merged `flows` section is
+   * resolved into a graph; when absent, no graph is built.
+   */
+  readonly steps?: StepRegistry;
+  /** Dot-joined key paths that must be present in the merged value. */
+  readonly required?: readonly string[];
+  /**
+   * Host readers by extension (`'.yaml'`) for the extensions not read built
+   * in (`.ts`, `.mts`, `.mjs`, `.js`, `.json`).
+   */
+  readonly loaders?: Loaders;
+  /**
+   * How a key set by two entries of the same layer is reported: `warn`
+   * (the default), `error` or `allow`.
+   */
+  readonly duplicates?: DuplicatesOption;
+}
+
+/** What {@link load} returns. */
+export interface LoadResult {
+  /**
+   * The merged value of every entry read. It is returned even when there
+   * are errors; with no source read it is `{}`.
+   */
+  readonly config: Readonly<Record<string, unknown>>;
+  /**
+   * The step graph of the merged `flows` section. Present only when
+   * `steps` was given; a missing `flows` section resolves to an empty
+   * graph.
+   */
+  readonly graph?: Graph;
+  /**
+   * Every problem found, in stage order: the `load-failed` errors in layer
+   * order, then merge's, then the schema's, then the graph's. The `entry`
+   * of a merge diagnostic indexes the entries read, all layers' entries
+   * concatenated in layer order.
+   */
+  readonly diagnostics: readonly Diagnostic[];
+  /**
+   * The file found for each layer that has one, in layer order, with an
+   * absolute `path`. A source that failed to read is listed here too; its
+   * `load-failed` diagnostic says why it contributed nothing.
+   */
+  readonly sources: readonly Source[];
+}
+
+/** What {@link createLoader} returns. */
+export interface ConfigLoader {
+  /**
+   * Look up, read, merge, validate and resolve the config for `cwd`; see
+   * {@link load}.
+   *
+   * @param cwd - Directory a relative layer `dir` resolves against.
+   * @returns The merged config, the graph when `steps` was given, every
+   *   diagnostic and the sources found.
+   */
+  readonly load: (cwd: string) => Promise<LoadResult>;
+}
+
+/** `typeof`, told apart for `null` and arrays, for messages. */
+function kindOf(value: unknown): string {
+  if (value === null) {
+    return 'null';
+  }
+  return Array.isArray(value)
+    ? 'an array'
+    : typeof value;
+}
+
+/** `true` for a non-null object that is not an array. */
+function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** Refuse options that are not an object, or a `schema`/`steps` of the wrong kind. */
+function checkOptions(options: unknown): asserts options is LoaderOptions {
+  if (!isRecord(options)) {
+    throw new TypeError(`createLoader: expected options to be an object, got ${kindOf(options)}`);
+  }
+  const { schema, steps } = options;
+  if (schema !== undefined && typeof schema !== 'object') {
+    throw new TypeError(`createLoader: expected schema to be a Standard Schema or sections, got ${kindOf(schema)}`);
+  }
+  if (schema === null) {
+    throw new TypeError('createLoader: expected schema to be a Standard Schema or sections, got null');
+  }
+  if (steps !== undefined && !isRecord(steps)) {
+    throw new TypeError(`createLoader: expected steps to be an object, got ${kindOf(steps)}`);
+  }
+}
+
+/** Validate `value` with a whole-value schema or with sections. */
+function schemaDiagnostics(value: unknown, schema: LoaderOptions['schema']): readonly Diagnostic[] {
+  if (schema === undefined) {
+    return [];
+  }
+  return Array.isArray(schema)
+    ? validateSections(value, schema as readonly SchemaSection[])
+    : validate(value, schema as StandardSchemaV1);
+}
+
+/**
+ * The merged `flows` section as `resolveGraph` takes it. A missing section
+ * is no flows; a section that is not an object is also read as no flows,
+ * since telling the host its type is wrong is the schema's job.
+ */
+function flowsOf(config: Readonly<Record<string, unknown>>): Readonly<Record<string, unknown>> {
+  const flows = config['flows'];
+  return isRecord(flows)
+    ? flows
+    : {};
+}
+
+/** Read every source, keeping source order; failures become diagnostics. */
+async function readAll(
+  sources: readonly Source[],
+  loaders: Loaders | undefined,
+): Promise<{ entries: readonly TaggedEntry[]; diagnostics: readonly Diagnostic[] }> {
+  const results = await Promise.all(sources.map((source) => readSource(source, loaders)));
+  return {
+    entries: results.flatMap((result) => (result.ok
+      ? result.entries
+      : [])),
+    diagnostics: results.flatMap((result) => (result.ok
+      ? []
+      : [result.diagnostic])),
+  };
+}
+
+/**
+ * Load the config for `cwd` in one call, by the steps in this module's
+ * description. Sources are looked up and read concurrently; results keep
+ * layer order. Nothing passed in is mutated.
+ *
+ * @example
+ * ```ts
+ * await load('/work/project', {
+ *   lookup: ['rafa.config.ts', '.rafa/config.yaml'],
+ *   layers: [{ layer: 'user', dir: '/home/me' }, { layer: 'project', dir: '.' }],
+ *   loaders: { '.yaml': (text) => Bun.YAML.parse(text) },
+ * });
+ * // { config: { … }, diagnostics: [],
+ * //   sources: [{ layer: 'user', path: '/home/me/.rafa/config.yaml' },
+ * //             { layer: 'project', path: '/work/project/rafa.config.ts' }] }
+ * ```
+ *
+ * @param cwd - Directory a relative layer `dir` resolves against.
+ * @param options - See {@link LoaderOptions}.
+ * @returns `{ config, graph, diagnostics, sources }`; `graph` only when
+ *   `options.steps` is given.
+ * @throws {TypeError} When `options` is not an object, `schema` is not an
+ *   object, or `steps` is not an object; when `lookup` or `layers` is
+ *   malformed (see `findSources`); when `loaders` is not an object or its
+ *   entry for a found file's extension is not a function (see
+ *   `readSource`); when `required` or `duplicates` is malformed (see
+ *   `merge`); or when the schema validates asynchronously.
+ * @throws The `stat` error, unchanged, when a lookup path fails for a
+ *   reason other than absence.
+ */
+export async function load(cwd: string, options: LoaderOptions): Promise<LoadResult> {
+  checkOptions(options);
+  const sources = await findSources(cwd, options.lookup, options.layers);
+  const read = await readAll(sources, options.loaders);
+  const merged = merge(read.entries, {
+    ...(options.duplicates === undefined
+      ? {}
+      : { duplicates: options.duplicates }),
+    ...(options.required === undefined
+      ? {}
+      : { required: options.required }),
+  });
+  const checked = schemaDiagnostics(merged.value, options.schema);
+  const base = {
+    config: merged.value,
+    sources,
+  };
+  if (options.steps === undefined) {
+    return { ...base, diagnostics: [...read.diagnostics, ...merged.diagnostics, ...checked] };
+  }
+  const resolved = resolveGraph(flowsOf(merged.value), options.steps);
+  return {
+    ...base,
+    graph: resolved.graph,
+    diagnostics: [...read.diagnostics, ...merged.diagnostics, ...checked, ...resolved.diagnostics],
+  };
+}
+
+/**
+ * Create a loader bound to `options`. The options are checked and copied
+ * now, so a later change to the caller's `lookup` or `layers` arrays does
+ * not reach the loader; each `load(cwd)` then runs {@link load}.
+ *
+ * @example
+ * ```ts
+ * const loader = createLoader({
+ *   lookup: ['rafa.config.ts', '.rafa/config.yaml'],
+ *   layers: [{ layer: 'user', dir: homedir() }, { layer: 'project', dir: '.' }],
+ *   schema,
+ *   steps,
+ *   loaders: { '.yaml': (text) => Bun.YAML.parse(text) },
+ * });
+ * const { config, graph, diagnostics, sources } = await loader.load(process.cwd());
+ * ```
+ *
+ * @param options - See {@link LoaderOptions}.
+ * @returns `{ load }`.
+ * @throws {TypeError} When `options` is not an object, `schema` is not an
+ *   object, or `steps` is not an object. Every other malformed option is
+ *   refused by `load`.
+ */
+export function createLoader(options: LoaderOptions): ConfigLoader {
+  checkOptions(options);
+  const bound: LoaderOptions = {
+    ...options,
+    lookup: Array.isArray(options.lookup)
+      ? [...options.lookup]
+      : options.lookup,
+    layers: Array.isArray(options.layers)
+      ? options.layers.map((item) => (isRecord(item)
+        ? { ...item }
+        : item))
+      : options.layers,
+  };
+  return { load: (cwd) => load(cwd, bound) };
+}
