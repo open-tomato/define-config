@@ -1,3 +1,31 @@
+- building each result object with Object.fromEntries defines own properties, so a __proto__ key from JSON.parse stays a key and does not change the prototype
+  trigger: when building merged objects from keys found in untrusted entries
+  kind: pattern
+  cause: assigning result[key] with key __proto__ calls the prototype setter
+  resolution: collect keys in a Map and finish with Object.fromEntries; a test checks the prototype and that no pollution leaks
+  artifact: Object.fromEntries(result)
+  signal: silent
+- breaking one rule at a time in a scratch copy of the module (sed on a copy, run the tests, restore from backup) shows each rule has a test that can fail
+  trigger: when a test file passes on its first run
+  kind: pattern
+  cause: a suite that has never been seen failing could be a false negative
+  resolution: cp the module to /tmp, sed one rule, run bun test on the file, cp back, and diff to confirm the restore
+  artifact: 31 pass  7 fail  <- no $replace
+  signal: silent
+- provenance keys are dot-joined paths as the spec says, so { 'a.b': 1 } and { a: { b: 1 } } both record under a.b and can be reported as duplicates of each other
+  trigger: when a config key itself contains a dot
+  kind: gotcha
+  cause: a dot-joined string cannot tell a dotted key from a nested one
+  resolution: documented on the Provenance type, the same limit types.ts states for Required paths; duplicates.ts will split keys on dots when building diagnostic paths
+  artifact: share a dot-joined path with the nested keys they spell
+  signal: silent
+- the spec rule that false at a key removes it applies to every key at runtime, so a boolean field cannot be set to false: it is deleted
+  trigger: when an entry sets a boolean config field to false, such as { verbose: false }
+  kind: gotcha
+  cause: apply has no schema, so it cannot tell a keyed-map id from a named boolean key; the types allow false for any boolean field
+  resolution: implemented as the spec says and documented; the spec owner should decide whether booleans need an escape or whether removal counting as false is acceptable
+  artifact: false removes the key
+  signal: silent
 - the const widens string literals, so an outcome-typed field such as expect becomes string and the accepted twin is refused
   trigger: when building a test entry as a plain const object literal and passing it to defineConfig<T>
   kind: gotcha
