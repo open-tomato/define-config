@@ -101,19 +101,22 @@ Integrate eval-driven development into TDD flow:
 
 Release-critical paths should target pass^3 stability before merge.
 
-## Rafa Gates
+## Project Gates
 
-When running tests in this project, use these verification gates:
+When running tests in this project, use the four verification gates defined in `AGENTS.md`:
 
 ```bash
-# Run tests (rafa gate)
-env -u CLAUDECODE bun test
+# 1. Lint: ESLint style enforcement
+bun run lint
 
-# Type check (rafa gate)
-bunx tsc --noEmit
+# 2. Check Types: TypeScript strict mode (includes *.test.ts files)
+bun run check-types
 
-# Lint (rafa gate)
-bunx eslint .
+# 3. Test: Bun test runner
+bun test
+
+# 4. Build: ESM bundle + declarations
+bun run build
 ```
 
-These gates run in sequence during the loop verification phase. Tests must pass all three gates before task completion.
+All four gates must pass before task completion. Read each gate's own exit code and summary line; never grep for "fail".

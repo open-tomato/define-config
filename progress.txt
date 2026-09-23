@@ -1,3 +1,24 @@
+- umbrella AGENTS.md has lines up to 454 chars due to markdown tables; define-config AGENTS.md has max 231 chars
+  trigger: checking wrap width consistency
+  kind: gotcha
+  cause: table rows in markdown are exempt from wrap measurement; prose in define-config file flows naturally
+  resolution: no action needed; per rules, wrap width is per-file measurement and tables are exempt
+  artifact: max line width: 231 characters (prose); 454 (umbrella, with tables)
+  signal: silent
+- define-config uses eslint flat config with markdown linting enabled by default
+  trigger: documenting ESLint configuration
+  kind: pattern
+  cause: config in eslint.config.mjs includes markdown plugin
+  resolution: documented behavior and remediation strategy in gates section
+  artifact: eslint.config.mjs lines 66-75
+  signal: silent
+- ESLint markdown linter requires language specifiers on all fenced code blocks
+  trigger: creating AGENTS.md for new repository
+  kind: pattern
+  cause: default markdown/fenced-code-language rule rejects unlabeled fences
+  resolution: added language specifiers: text, sh, ts to all code blocks
+  artifact: markdown/fenced-code-language
+  signal: loud
 - eslint does not cover .yml files, so lint passing says nothing about workflow validity
   trigger: when adding YAML files to this repo
   kind: gotcha

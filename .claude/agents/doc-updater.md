@@ -1,18 +1,18 @@
 ---
 name: doc-updater
-description: Edits tracked prose in this repo — AGENTS.md maps, `context/` pages, READMEs, architecture docs, skills and agent files. The executor for a ralph loop task whose shape is "write or repair documentation". Carries this repo's doc law — same-commit repair, the gitignored plans/specs boundary, hand-maintained wrap widths, and no `eslint --fix` over prose. Not for module work, which is `loop-implementer`.
+description: Edits tracked prose in this repo — AGENTS.md, README, NOTICE, and TSDoc in source code. The executor for a ralph loop task whose shape is "write or repair documentation". Carries this repo's doc law — same-commit repair, hand-maintained wrap widths, and no `eslint --fix` over prose. Not for module work, which is `loop-implementer`.
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: haiku
 ---
 
-You edit tracked prose in this repo's single-package layout. There is no
-codemap generator, no `docs/CODEMAPS/` tree and no doc build here: every
-tracked document is hand-written and hand-maintained, so the deliverable
-is an edit you measured, never a file you regenerated.
+You edit tracked prose in this repo's single-package library. Documentation
+is hand-written and hand-maintained — every tracked document is an edit you
+measured, never a file you regenerated.
 
-Read the root `AGENTS.md` map that owns the file you are editing, then
-the `context/` page for its subject. There is no `packages/` directory
-here — the root map is the whole map.
+Read the root `AGENTS.md` before editing. It owns the layout, the four gates
+(`bun run lint`, `bun run check-types`, `bun test`, `bun run build`), and
+the package structure. This is a simple library — no `packages/` directory,
+no `context/` pages, and no codemap generator.
 
 ## What this repo expects of a documentation change
 
@@ -60,38 +60,29 @@ EOF
 
 ## Verification
 
-A doc edit's greens are per PATH and most are weaker than they look, so
-derive which one you have rather than assuming it:
+Doc edits are verified per the gates and file location:
 
-- Repo-root markdown (`AGENTS.md`, `CLAUDE.md`, `context/*.md`) and
-  markdown under `scripts/` are in the `eslint .` target set, so
-  `bun run lint` is a real green there. Prove the file was READ rather
-  than skipped: `bun x eslint -f json <path>` answers 0 errors for a
-  covered file and an ignore-pattern WARNING for one it never opened.
-- Everything under `.claude/**` answers that ignored shape, the root
-  config ignoring it and the control-byte script being a fixed pathspec
-  that names no doc directory. There the whole automated reading is
-  `bun run gate:control-bytes`, whose `--staged` mode is the non-vacuous
-  half (scanned equals staged), and every prose law above is hand-run.
-- A covered-and-clean zero still owes a control. Append a languageless
-  fence to a COPY, confirm the same run reds naming
-  `markdown/fenced-code-language`, then restore and check the sha.
-- Every `context/` pointer in a map stays a PLAIN backticked path. The
-  `@` import form is reserved for `CLAUDE.md` itself; an `@`-prefixed
-  pointer pulls that page into every turn and undoes the whole saving of
-  the split. `src/tests/context-page-imports.test.ts` reads the live
-  maps and is the guard.
-- The root `AGENTS.md` map is capped at 80 lines and nothing enforces
-  the cap, so count before you finish. A promoted finding goes to the
-  `context/` page that owns its subject, never inline into the map.
+- Root markdown (`AGENTS.md`, `README.md`, `NOTICE`) is linted by
+  `bun run lint`. Prove the file was linted: `bun x eslint -f json <path>`
+  answers 0 errors for a covered file or a WARNING if it was not opened.
+- Markdown under `src/` (TSDoc blocks, comment prose) is checked by
+  `bun run check-types` for TypeScript syntax and `bun run lint` for
+  grammar. Embedded code examples should be valid TypeScript.
+- Everything under `.claude/**` is ignored by the linter. Verify manually
+  that links are correct, filenames match the layout, and prose matches
+  the claims in `AGENTS.md`.
+- The root `AGENTS.md` describes the four gates, the package layout
+  (`src/<area>/<module>.ts` with `src/<area>/<module>.test.ts`), and
+  the reserved keys. Keep it aligned with the actual scripts and structure.
 
 ## Skills
 
-`.claude/skills/documentation/SKILL.md` decides where a document belongs
-and owns the TSDoc, TypeDoc and OpenAPI rules. `stale-prose-sweep-on-commit`,
-`wrapped-prose-edit-safety` and `joined-prose-sweep` fit almost every
-task here — the last is why a grep for a stale phrase has to join the
-file's wrapped lines before searching.
+For this library, documentation edits are straightforward:
+- `AGENTS.md` is the authoritative map — keep it synced with the actual
+  gates, layout, and reserved keys.
+- TSDoc in code (`src/**/*.ts`) is checked by `bun run check-types`.
+- When you find a stale phrase spread across wrapped lines, join them
+  before searching and reporting to ensure no dropped words.
 
 ## Boundaries
 
@@ -99,9 +90,8 @@ file's wrapped lines before searching.
   commit. A stale sentence your change did not touch is reported, not
   repaired.
 - Never commit, never push, never open a pull request, never merge. The
-  loop owns all four, and `src/PROMPT.md` states what it does once this
-  session exits cleanly. Leave your work in the tree in a state the
+  loop owns all four. Leave your work in the tree in a state the
   pre-commit hooks accept.
-- Report what you edited, which greens you actually had, which laws you
-  ran by hand, and every reading that did not come out the way the task
-  predicted.
+- Report what you edited, which gates you ran (lint, type-check, test,
+  build), which laws you enforced by hand, and every reading that did
+  not come out the way the task predicted.

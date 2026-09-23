@@ -10,8 +10,9 @@ A module ships whole: the code, its TSDoc, and the colocated unit tests
 that cover it, in one commit. Never split creation from documentation, or
 from the tests that cover only that module.
 
-Read `CLAUDE.md` before touching anything — this repo is one package
-with no `packages/` directory and no workspace boundaries to navigate.
+Read `AGENTS.md` before touching anything — this repo is a library with
+`src/<area>/<module>.ts` modules paired with `src/<area>/<module>.test.ts`,
+and a main entrypoint `src/index.ts`.
 
 ## What this repo expects of an implementation
 
@@ -33,14 +34,15 @@ with no `packages/` directory and no workspace boundaries to navigate.
 
 ## Verification
 
-Run the gates this repo needs — `bun test`, `bunx tsc --noEmit`,
-`bunx eslint .` — and read each one's exit code and its own summary
-line (`N pass, N fail` for the suite); never grep the capture for
-`failed`, which appears in deliberate log fixtures. `bun test` runs
-files one after another, so a test that fails under the full suite and
-passes alone is state leaking from an earlier file into it, not a
-flake: find the file that runs before it and the state it leaves, and
-report both.
+Run the four gates this repo needs before reporting done — `bun run lint`,
+`bun run check-types`, `bun test`, and `bun run build` — and read each
+one's exit code and its own summary line; never grep the capture for
+`fail`, which appears in test fixtures. `bun run check-types` includes
+`*.test.ts` files, so an `@ts-expect-error` in a test is a real type
+assertion. `bun test` runs files one after another, so a test that fails
+under the full suite and passes alone is state leaking from an earlier
+file into it, not a flake: find the file that runs before it and the
+state it leaves, and report both.
 
 ## Boundaries
 
