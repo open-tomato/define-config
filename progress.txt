@@ -1,3 +1,17 @@
+- an EACCES assertion can pass vacuously if the process runs as root
+  trigger: testing a permission-denied stat path with chmod 000
+  kind: pattern
+  cause: root ignores directory permissions, so stat succeeds
+  resolution: check process.getuid() and branch; confirmed uid 501 here and ran a mutation control that made the test fail
+  artifact: a stat failure other than absence is thrown, not read as a missing file
+  signal: silent
+- import/order puts node: builtins before bun:test, and in a separate group
+  trigger: importing bun:test alongside node: builtins in a test file
+  kind: gotcha
+  cause: the ESLint import/order config treats bun:test as external and node: as builtin
+  resolution: put node: imports first, then a blank line, then bun:test
+  artifact: `bun:test` import should occur after import of `node:path`
+  signal: loud
 - artifact: PLAN_TRACKER-rafa-2-open-tomato-define-config.md: Type 'boolean' is not assignable to type 'number'.
 - EdgeTarget.repeat is typed number, so the spec's repeat: true wanted-loop marker is a type error
   trigger: when a test or acceptance fixture typed as Flows writes an edge object with repeat: true
@@ -223,17 +237,3 @@
   resolution: assert only the value for those examples, or give the entries distinct $layer or duplicates: 'allow' when a test expects no diagnostics
   artifact: is set more than once within one layer: the unlabelled layer (entries 0, 1)
   signal: loud
-- provenance records a set at 'a.x', but the merged value has no nested a.x, so no drop can be found
-  trigger: when an entry uses a dotted key such as { 'a.x': 1 }
-  kind: gotcha
-  cause: provenance paths are dot-joined, the same limit apply and ConfigEntry already document
-  resolution: report without an entry, with the message 'absent from the merged value'
-  artifact: is required but absent from the merged value
-  signal: silent
-- a non-map value above a required path also drops it, which the task text (false or $replace only) does not mention
-  trigger: when a later entry overwrites a parent key with a scalar or array
-  kind: gotcha
-  cause: apply records a plain set at the parent, which drops the whole subtree below it
-  resolution: name that entry as the dropper, with the message 'set a to a value that is not a map'
-  artifact: set a to a value that is not a map
-  signal: silent
