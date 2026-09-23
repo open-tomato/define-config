@@ -1,3 +1,17 @@
+- @stylistic/multiline-ternary rejects single-line ternaries
+  trigger: when writing a ternary in scripts under this ESLint config
+  kind: gotcha
+  cause: shared lint rules require newlines between test, consequent and alternate
+  resolution: avoid the ternary, for example Number(cond)
+  artifact: Expected newline between test and consequent of ternary expression
+  signal: loud
+- dry-run lists files as lines of the form 'packed <size> <path>' and runs the prepack build first
+  trigger: when parsing bun pm pack --dry-run output
+  kind: pattern
+  cause: bun pm pack triggers the prepack script even with --dry-run
+  resolution: parse with /^packed\s+\S+\s+(.+?)\s*$/ per line
+  artifact: packed 82B dist/index.js
+  signal: silent
 - frontmatter description still referenced context/ pages
   trigger: when reading doc-updater.md description
   kind: location
