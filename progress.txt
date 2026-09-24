@@ -1,3 +1,10 @@
+- PIPESTATUS is not set in zsh, so EXIT=${PIPESTATUS[0]} printed empty
+  trigger: when reading the lint exit code through a pipe in zsh
+  kind: gotcha
+  cause: zsh uses the lowercase pipestatus array
+  resolution: use ${pipestatus[1]} or redirect output and read $? directly
+  artifact: EXIT1=
+  signal: silent
 - description field updated to mirror README theme
   trigger: package.json alignment
   kind: pattern
