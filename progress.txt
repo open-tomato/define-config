@@ -1,3 +1,11 @@
+- reachable lists the hook node after the hooked node, not before it
+  trigger: when asserting reachable() order for a flow with a before hook
+  kind: gotcha
+  cause: the successor function follows edges and then anchor to hooked node, so the hook is reached after the edge target
+  resolution: pin the walk order (lint, test, format), or assert membership only
+  artifact: build.test
+    +   "build.format"
+  signal: loud
 - several of those fixtures legitimately produce errors, such as interactive-unattended and a `when` on an unregistered-pure step, so a blanket no-errors assertion fails
   trigger: when asserting no error diagnostics on the reachability.test.ts fixtures
   kind: gotcha

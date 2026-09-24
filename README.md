@@ -243,6 +243,54 @@ console.log(result.graph.hooks);
 // [{ flow: 'next', node: 'next.lint', anchor: 'next.test', position: 'before' }]
 ```
 
+### Driving a graph
+
+Four helper functions read a resolved graph to answer what a runner asks as it
+steps through a flow.
+
+- `next(graph, node, outcome)` finds the node an outcome leads to, throwing a
+  `RangeError` when the node is unknown or the outcome is undeclared.
+- `hooksOf(graph, node)` lists the nodes placed before and after a node via
+  `when:` placements.
+- `reachable(graph, flow)` returns all nodes reached from a flow's start,
+  following every edge (including `repeat: true` and hooks).
+- `walkOrder(graph, flow)` returns the depth-first order nodes are placed in,
+  following non-`repeat: true` edges only; bounding a loop is the runner's job.
+
+```ts
+import { resolveGraph, next, hooksOf, walkOrder } from '@open-tomato/define-config';
+
+const result = resolveGraph(
+  {
+    build: {
+      $start: 'lint',
+      lint: { onSuccess: 'test' },
+      format: { when: 'before:test' },
+      test: {},
+    },
+  },
+  {
+    lint: { outcomes: ['success', 'fail'] },
+    format: { outcomes: ['success'], pure: true },
+    test: { outcomes: ['success', 'fail'] },
+  },
+);
+
+const { graph } = result;
+
+// next() finds the node an outcome leads to
+console.log(next(graph, 'build.lint', 'success'));
+// build.test
+
+// hooksOf() lists the nodes placed before and after a node
+console.log(hooksOf(graph, 'build.test'));
+// { before: [ 'build.format' ], after: [] }
+
+// walkOrder() shows the placement order
+console.log(walkOrder(graph, 'build'));
+// [ 'build.lint', 'build.format', 'build.test' ]
+```
+
 ## createLoader
 
 Find, read, merge, validate and resolve the config files of each layer. For each layer, in order
