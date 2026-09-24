@@ -2,6 +2,13 @@
 
 One section per released version, newest first, headed `## <version> — <date>, <release title>`. All additions to the public surface carry a change note.
 
+## 0.1.1 — 2026-09-24, define-config 0.1.1 — spec-true types, clean tarball, linted README
+
+- **resolveGraph** types: `EdgeTarget.repeat` accepts only `true`, so `repeat: false`, a number or a string is a type error instead of silently leaving the loop unmarked; `StepEntry.onChoice` is typed as a map of choice to step id or edge object; `FlowEntry` accepts `$start` and `$unattended` beside step entries, types step ids as strings starting with a printable ASCII character other than `$` (so a misspelt `$strat` is caught), and refuses a step id set to a string or a boolean.
+- **LayeredEntry**: accepts `$layer` on a config whose root is a keyed map; root ids there must start with a printable ASCII character other than `$`.
+- Packaging: the published package no longer ships type declarations for internal test fixtures.
+- Documentation: README code examples follow the project's lint style (import order, trailing commas, split chained calls, printed loader results), and the README opening and the `package.json` description describe the package in three sentences.
+
 ## 0.1.0 — 2026-09-23, Initial release
 
 - **defineConfig**: types config file entries at authoring time; exists for its parameter type to let an editor flag a wrong key or a `$replace` on a scalar while entries are written.

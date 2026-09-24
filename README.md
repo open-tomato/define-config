@@ -1,7 +1,8 @@
 # define-config
 
-Typed config arrays with id-keyed merge, `$replace`, Standard Schema validation and outcome-typed
-step graphs. Dependency-free.
+Typed config arrays with id-keyed merge and outcome-typed step graphs.
+Merges entries recursively with `$replace` and `$layer` support, and resolves flows.
+Validates with Standard Schema and is dependency-free.
 
 ## Install
 
@@ -80,6 +81,11 @@ console.log(withRequired.diagnostics);
 The two entries sit in different layers. Without the `$layer` labels they would share the implicit
 layer, and entry 1 setting `a` again would also produce a `duplicate-key` warning at `a`.
 
+An entry typed as `LayeredEntry<T>` takes `$layer` as a string whether the root of `T` has named
+keys or is a keyed map. When the root is a keyed map, its ids are typed as strings that start with
+a printable ASCII character other than `$`, so a misspelt `$lyer` is a type error, and a root id
+set to `true` is a type error as it is in a `ConfigEntry`.
+
 The merged value never shares a plain object or an array with an entry, and no entry is changed.
 Functions and class instances (a `Date`, a `Map`) are values: they are kept by reference.
 
@@ -90,12 +96,16 @@ diagnostic.
 
 ```ts
 import { z } from 'zod';
+
 import { validate } from '@open-tomato/define-config';
 
 const schema = z
   .object({
     name: z.string(),
-    port: z.number().int().positive(),
+    port: z
+      .number()
+      .int()
+      .positive(),
   })
   .strict();
 
@@ -116,6 +126,11 @@ with its own schema and prefixes each diagnostic's path with that section's path
 Resolve the merged `flows` section into a step graph and report every problem in it. The merge
 produces a `flows` section where flows are keyed by flow name, each containing step entries keyed
 by step id.
+
+A flow typed as `Flows` takes a step entry object at each step id: a step id set to a string or a
+boolean is a type error. `$start` and `$unattended` are the flow's only `$`-prefixed keys; step ids
+are typed as strings that start with a printable ASCII character other than `$`, so a misspelt
+`$strat` is a type error too.
 
 | Sugar | Equivalent |
 |-------|------------|
@@ -139,7 +154,7 @@ const result = resolveGraph(
   {
     lint: { outcomes: ['success', 'fail'] },
     test: { outcomes: ['success', 'fail'] },
-  }
+  },
 );
 
 console.log(result.graph.nodes['build.lint']);
@@ -150,8 +165,9 @@ console.log(result.graph.edges);
 ```
 
 A `repeat: true` edge marks a loop as intentional; without it, a back edge yields a `cycle` error.
-Only `true` marks the loop: a number for `repeat` is kept on the edge for the host, and the back
-edge is still a `cycle`.
+`repeat` is typed as the literal `true`: `repeat: false`, `repeat: 2` or `repeat: 'twice'` is a
+type error. A config that bypasses the types can still carry another value; it is kept on the edge
+for the host, but only `true` marks the loop, so the back edge is still a `cycle`.
 
 ```ts
 import { resolveGraph } from '@open-tomato/define-config';
@@ -189,8 +205,9 @@ names of its own.
 ```ts
 import { homedir } from 'node:os';
 
-import { createLoader } from '@open-tomato/define-config';
 import { z } from 'zod';
+
+import { createLoader } from '@open-tomato/define-config';
 
 const schema = z.object({
   name: z.string(),
@@ -208,8 +225,15 @@ const loader = createLoader({
 });
 
 const { config, diagnostics, sources } = await loader.load(process.cwd());
-// config: the merged value; diagnostics: every problem, in stage order;
-// sources: [{ layer, path }] for each layer that had a file, with an absolute path
+
+console.log(config);
+// the merged value
+
+console.log(diagnostics);
+// every problem, in stage order
+
+console.log(sources);
+// [{ layer, path }] for each layer that had a file, with an absolute path
 ```
 
 A relative `dir` resolves against the directory passed to `load`. A file that cannot be read

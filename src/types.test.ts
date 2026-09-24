@@ -112,11 +112,44 @@ describe('ConfigEntry', () => {
 });
 
 describe('LayeredEntry', () => {
-  test('adds $layer as a string beside the entry', () => {
+  /** A config whose root is a keyed map: every top-level key is an id. */
+  type Steps = T['steps'];
+
+  test('accepts $layer as a string on a named-key root and refuses a number', () => {
     // @ts-expect-error `$layer` is a string
     const bad: LayeredEntry<T> = { $layer: 1, name: 'x' };
     const good: LayeredEntry<T> = { $layer: 'project', name: 'x' };
     expect([bad.name, good.$layer]).toEqual(['x', 'project']);
+  });
+
+  test('accepts $layer as a string on a keyed-map root and refuses a number', () => {
+    // @ts-expect-error `$layer` is a string
+    const bad: LayeredEntry<Steps> = { $layer: 1, build: { run: 'bun run build' } };
+    const good: LayeredEntry<Steps> = { $layer: 'project', build: { run: 'bun run build' }, lint: false };
+    expect<unknown[]>([bad.$layer, good.$layer]).toEqual([1, 'project']);
+  });
+
+  test('refuses true at a map id on a named-key root', () => {
+    // @ts-expect-error `true` is neither an entry, a `$replace` nor `false`
+    const bad: LayeredEntry<T> = { $layer: 'project', steps: { lint: true } };
+    const good: LayeredEntry<T> = { $layer: 'project', steps: { lint: { run: 'bun run lint' } } };
+    expect<unknown[]>([bad.steps, good.steps]).toEqual([{ lint: true }, { lint: { run: 'bun run lint' } }]);
+  });
+
+  test('refuses true at a map id on a keyed-map root', () => {
+    // @ts-expect-error `true` is neither an entry, a `$replace` nor `false`
+    const bad: LayeredEntry<Steps> = { $layer: 'project', lint: true };
+    const good: LayeredEntry<Steps> = { $layer: 'project', lint: { $replace: true, run: 'bun run lint' } };
+    expect<unknown[]>([bad.lint, good.$layer]).toEqual([true, 'project']);
+  });
+
+  test('refuses false at a required root id and a misspelt $layer', () => {
+    // @ts-expect-error `build` is required
+    const removed: LayeredEntry<Steps, 'build'> = { $layer: 'project', build: false };
+    const kept: LayeredEntry<Steps, 'build'> = { $layer: 'project', lint: false };
+    // @ts-expect-error `$lyer` is neither `$layer` nor a root id
+    const typo: LayeredEntry<Steps> = { $lyer: 'project' };
+    expect<unknown[]>([removed.build, kept.lint, Object.keys(typo)]).toEqual([false, false, ['$lyer']]);
   });
 });
 

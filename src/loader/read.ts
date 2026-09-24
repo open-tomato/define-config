@@ -41,6 +41,7 @@ import { extname, isAbsolute } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { error } from '../diagnostics';
+import { isPlainObject } from '../merge/plain-object';
 
 /**
  * A reader the host supplies for one extension: it turns the file's text
@@ -110,15 +111,6 @@ function kindOf(value: unknown): string {
     return 'a non-plain object';
   }
   return typeof value;
-}
-
-/** `true` for an object whose prototype is `Object.prototype` or `null`. */
-function isPlainObject(value: unknown): value is Readonly<Record<string, unknown>> {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-  const prototype: unknown = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
 }
 
 /** Run `step`, turning anything it throws into a {@link LoadFailure}. */

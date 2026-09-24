@@ -25,12 +25,11 @@ export type EdgeTarget =
     to: string;
     /**
      * `true` marks an edge that loops back to an earlier step entry as a
-     * wanted loop, so `resolveGraph` reports no `cycle` for it. A number
-     * (how many times the host lets the edge be taken in one run) is kept
-     * on the {@link GraphEdge} for the host, but does not mark the loop:
-     * only `true` does.
+     * wanted loop, so `resolveGraph` reports no `cycle` for it. Only the
+     * literal `true` is accepted: `false`, a number or any other value is a
+     * type error; leave `repeat` out for an edge that is not a loop.
      */
-    repeat?: boolean | number;
+    repeat?: true;
   };
 
 /** What a step entry does on an outcome: follow an edge to its target. */
@@ -58,8 +57,13 @@ export type StepEntry<Outcomes extends string = string, Ids extends string = str
   onSuccess?: Handler;
   /** Sugar for `on: { fail: … }`. */
   onFail?: Handler;
-  /** Sugar for the edge taken on whichever choice an interactive step ends in. */
-  onChoice?: Handler;
+  /**
+   * Sugar for `on: { <choice>: … }` on an interactive step: a map from each
+   * choice the step can end in to the edge taken on it, each value a step id
+   * or an edge object. Every key becomes an outcome of its own; a single
+   * step id or edge object in place of the map is a type error.
+   */
+  onChoice?: Record<string, Handler>;
   /** Places this entry immediately before or after the step entry with that id. */
   when?: `before:${Ids}` | `after:${Ids}`;
   /** The outcome this entry is expected to end in. */
@@ -69,9 +73,37 @@ export type StepEntry<Outcomes extends string = string, Ids extends string = str
 };
 
 /**
+ * The characters a step id may start with in a typed {@link FlowEntry}:
+ * every printable ASCII character except `$`.
+ */
+type StepIdHeads = ' !"#%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~';
+
+/** Splits string `S` into the union of its characters. */
+type Chars<S extends string, Acc extends string = never> = S extends `${infer C}${infer Rest}`
+  ? Chars<Rest, Acc | C>
+  : Acc;
+
+/**
+ * The key set of the step ids of a {@link FlowEntry}: every string whose
+ * first character is a printable ASCII character other than `$`. Leaving
+ * `$` out keeps `$start` and `$unattended` from being checked against the
+ * step entries' index signature, which would refuse their string and
+ * boolean values.
+ */
+type StepId = `${Chars<StepIdHeads>}${string}`;
+
+/**
  * One flow: its step entries keyed by step id, plus the flow's reserved
- * keys. Because `$start` and `$unattended` share the object with the step
- * ids, the value at a step id is typed to admit a string or a boolean too.
+ * keys `$start` and `$unattended`. The value at a step id is a step entry
+ * only: a string or a boolean there is a type error.
+ *
+ * Step ids are typed as the strings that start with a printable ASCII
+ * character other than `$`, so any other `$`-prefixed key, such as a
+ * misspelt `$strat`, is a type error too. A step id that is empty or starts
+ * with a non-ASCII character is refused by the type as well, though
+ * `resolveGraph` accepts it at run time. Reading a step entry back with a
+ * key typed only as `string` is a type error for the same reason; narrow
+ * the key to a step id first.
  *
  * @typeParam Outcomes - The outcome names the flow's steps can end in.
  * @typeParam Ids - The step ids `$start` and `when` may name.
@@ -82,7 +114,7 @@ export type FlowEntry<Outcomes extends string = string, Ids extends string = str
   /** `true` marks a flow that runs without user input. */
   $unattended?: boolean;
   /** A step entry, keyed by its step id. */
-  [id: string]: StepEntry<Outcomes, Ids> | string | boolean | undefined;
+  [id: StepId]: StepEntry<Outcomes, Ids>;
 };
 
 /**
@@ -144,9 +176,11 @@ export interface GraphEdge {
   /** The outcome the edge is taken on. */
   outcome: string;
   /**
-   * The `repeat` of the edge object the handler was written as: `true`, or
-   * how many times the edge may be taken in one run, for an edge meant to
-   * loop back; `false` for a handler written as an id or without `repeat`.
+   * The `repeat` of the edge object the handler was written as: `true` for
+   * an edge meant to loop back; `false` for a handler written as an id or
+   * without `repeat`. A number reaches it only from a config that was not
+   * typed as {@link EdgeTarget}, which accepts `repeat: true` alone; it is
+   * kept for the host but does not mark the loop.
    */
   repeat: boolean | number;
 }

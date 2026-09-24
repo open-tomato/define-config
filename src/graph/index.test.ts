@@ -131,7 +131,7 @@ describe('resolveGraph wiring', () => {
 
   test('a flows value typed as Flows is accepted and not mutated', () => {
     // Arrange
-    const flows: Flows = { next: { build: { onSuccess: { to: 'test', repeat: 2 } }, test: {} } };
+    const flows: Flows = { next: { build: { onSuccess: { to: 'test', repeat: true } }, test: {} } };
     const before = structuredClone(flows);
 
     // Act
