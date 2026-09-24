@@ -8,7 +8,7 @@ import { pathToFileURL } from 'node:url';
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 
-import { readSource } from './read';
+import { readSource, reloadSpecifier } from './read';
 
 /*
  * Every file sits flat under a fresh temporary root, named after the case
@@ -224,6 +224,158 @@ describe('the runtime module cache', () => {
   });
 });
 
+describe('reloadSpecifier', () => {
+  test('on bun it is the plain absolute path with ?v=<key>', () => {
+    expect(reloadSpecifier('/repo/rafa.config.ts', 'abc123', true)).toBe('/repo/rafa.config.ts?v=abc123');
+  });
+
+  test('on node it is the file URL with ?v=<key>', () => {
+    const specifier = reloadSpecifier('/repo/rafa.config.ts', 'abc123', false);
+
+    expect(specifier).toBe('file:///repo/rafa.config.ts?v=abc123');
+  });
+
+  test('on node a # in the path is percent-encoded, so the query is not a fragment', () => {
+    // Act
+    const specifier = reloadSpecifier('/repo/a#b/rafa.config.ts', 'abc123', false);
+
+    // Assert: the URL still parses to the same file and the same key.
+    // Control: the bun form keeps the # as written.
+    expect(specifier).toBe('file:///repo/a%23b/rafa.config.ts?v=abc123');
+    expect(new URL(specifier).pathname).toBe('/repo/a%23b/rafa.config.ts');
+    expect(new URL(specifier).search).toBe('?v=abc123');
+    expect(reloadSpecifier('/repo/a#b/rafa.config.ts', 'abc123', true)).toBe('/repo/a#b/rafa.config.ts?v=abc123');
+  });
+});
+
+describe('reload', () => {
+  /*
+   * Each case writes its own files under its own mkdtemp directory: a
+   * module imported once stays in this process's registry for the rest of
+   * the run, whichever file imported it.
+   */
+  const dirs: string[] = [];
+
+  async function freshDir(): Promise<string> {
+    const dir = await mkdtemp(join(tmpdir(), 'define-config-reload-'));
+    dirs.push(dir);
+    return dir;
+  }
+
+  const store = globalThis as Record<string, unknown>;
+
+  afterAll(async () => {
+    await Promise.all(dirs.map((dir) => rm(dir, { recursive: true, force: true })));
+  });
+
+  test('an .mjs file read, rewritten and read again yields the edit', async () => {
+    // Arrange
+    const path = join(await freshDir(), 'rafa.config.mjs');
+    await writeFile(path, 'export default { version: 1 };\n');
+    const before = entries(await readSource({ layer: 'project', path }, {}, { reload: true }));
+    await writeFile(path, 'export default { version: 2 };\n');
+
+    // Act
+    const after = entries(await readSource({ layer: 'project', path }, {}, { reload: true }));
+
+    // Assert
+    expect(before).toEqual([{ version: 1, $layer: 'project' }]);
+    expect(after).toEqual([{ version: 2, $layer: 'project' }]);
+  });
+
+  test('a .ts file read, rewritten and read again yields the edit', async () => {
+    // Arrange
+    const path = join(await freshDir(), 'rafa.config.ts');
+    await writeFile(path, 'const v: number = 1;\nexport default { version: v };\n');
+    const before = entries(await readSource({ layer: 'project', path }, {}, { reload: true }));
+    await writeFile(path, 'const v: number = 2;\nexport default { version: v };\n');
+
+    // Act
+    const after = entries(await readSource({ layer: 'project', path }, {}, { reload: true }));
+
+    // Assert
+    expect(before).toEqual([{ version: 1, $layer: 'project' }]);
+    expect(after).toEqual([{ version: 2, $layer: 'project' }]);
+  });
+
+  test('a file read 100 times unchanged is evaluated once', async () => {
+    // Arrange
+    const counter = 'defineConfigReadReloadOnce';
+    const path = join(await freshDir(), 'rafa.config.mjs');
+    await writeFile(path, `globalThis.${counter} = (globalThis.${counter} ?? 0) + 1;\nexport default { n: 1 };\n`);
+
+    // Act
+    const results: ReadResult[] = [];
+    for (let read = 0; read < 100; read += 1) {
+      results.push(await readSource({ layer: 'project', path }, {}, { reload: true }));
+    }
+
+    // Assert: every read succeeded, and the counter the fixture bumps on
+    // each evaluation moved once.
+    expect(results.map((result) => entries(result))).toEqual(
+      Array.from({ length: 100 }, () => [{ n: 1, $layer: 'project' }]),
+    );
+    expect(store[counter]).toBe(1);
+  });
+
+  test('an edit is a fresh evaluation, counted by the fixture', async () => {
+    // Arrange: the control for the case above: the same counter does move
+    // when the bytes change, so a count of 1 there was not a dead counter.
+    const counter = 'defineConfigReadReloadEdited';
+    const path = join(await freshDir(), 'rafa.config.mjs');
+    const bump = `globalThis.${counter} = (globalThis.${counter} ?? 0) + 1;\n`;
+    const text = (n: number): string => `${bump}export default { n: ${n} };\n`;
+    await writeFile(path, text(1));
+    await readSource({ layer: 'project', path }, {}, { reload: true });
+    await writeFile(path, text(2));
+
+    // Act
+    await readSource({ layer: 'project', path }, {}, { reload: true });
+
+    // Assert
+    expect(store[counter]).toBe(2);
+  });
+
+  test('a module the config imports stays cached: the config\'s edit sits beside the helper\'s old value', async () => {
+    // Arrange
+    const dir = await freshDir();
+    const path = join(dir, 'rafa.config.mjs');
+    await writeFile(join(dir, 'helper.mjs'), 'export const helper = \'old\';\n');
+    await writeFile(path, 'import { helper } from \'./helper.mjs\';\nexport default { config: \'old\', helper };\n');
+    const before = entries(await readSource({ layer: 'project', path }, {}, { reload: true }));
+    await writeFile(join(dir, 'helper.mjs'), 'export const helper = \'new\';\n');
+    await writeFile(path, 'import { helper } from \'./helper.mjs\';\nexport default { config: \'new\', helper };\n');
+
+    // Act
+    const after = entries(await readSource({ layer: 'project', path }, {}, { reload: true }));
+
+    // Assert: only the config file is evaluated again.
+    expect(before).toEqual([{ config: 'old', helper: 'old', $layer: 'project' }]);
+    expect(after).toEqual([{ config: 'new', helper: 'old', $layer: 'project' }]);
+  });
+
+  test('a module file removed before the read is load-failed naming could not read the file', async () => {
+    // Arrange: control: the same path read with reload while it existed.
+    const path = join(await freshDir(), 'rafa.config.mjs');
+    await writeFile(path, 'export default { gone: false };\n');
+    expect(entries(await readSource({ layer: 'project', path }, {}, { reload: true }))).toEqual([
+      { gone: false, $layer: 'project' },
+    ]);
+    await rm(path);
+
+    // Act
+    const result = await readSource({ layer: 'project', path }, {}, { reload: true });
+
+    // Assert
+    expect(failure(result)).toMatchObject({
+      level: 'error',
+      code: 'load-failed',
+      path: ['project', path],
+    });
+    expect(failure(result).message).toStartWith('could not read the file: ');
+  });
+});
+
 describe('load-failed', () => {
   test('an extension with no reader is load-failed at [layer, path]', async () => {
     // Control: the same file reads when a reader is given.
@@ -388,6 +540,23 @@ describe('refused arguments', () => {
 
     await expect(readSource({ layer: 'user', path: at('config.conf') }, loaders)).rejects.toThrow(
       'loaders[".conf"]: expected a function, got string',
+    );
+  });
+
+  test('a reload that is not a boolean is refused', async () => {
+    // Control: a boolean reload reads the same source.
+    expect((await readSource({ layer: 'user', path: at('object.json') }, {}, { reload: false })).ok).toBe(true);
+
+    await expect(
+      // @ts-expect-error reload is a boolean
+      readSource({ layer: 'user', path: at('object.json') }, {}, { reload: 'yes' }),
+    ).rejects.toThrow(new TypeError('readSource: expected options.reload to be a boolean, got string'));
+  });
+
+  test('options that are not an object are refused', async () => {
+    // @ts-expect-error options is an object
+    await expect(readSource({ layer: 'user', path: at('object.json') }, {}, true)).rejects.toThrow(
+      'expected options to be an object, got boolean',
     );
   });
 });
