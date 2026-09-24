@@ -1,3 +1,4 @@
+import type { FlowSummary, GraphHook } from '../index';
 import type {
   EdgeTarget,
   FlowEntry,
@@ -141,5 +142,15 @@ describe('StepRegistry and Graph', () => {
 
     // Assert
     expect(graph.nodes['main.build']?.outcomes).toEqual(['pass', 'fail']);
+  });
+});
+
+describe('GraphHook and FlowSummary', () => {
+  test('are exported from the package entry and type a hook and a flow', () => {
+    const hook: GraphHook = { flow: 'ship', node: 'lint', anchor: 'build', position: 'before' };
+    // @ts-expect-error `position` is `before` or `after`
+    const bad: GraphHook = { flow: 'ship', node: 'lint', anchor: 'build', position: 'beside' };
+    const flow: FlowSummary = { name: 'ship', start: 'build', unattended: false, nodes: ['build', 'lint'] };
+    expect<unknown[]>([hook.position, bad.position, flow.start]).toEqual(['before', 'beside', 'build']);
   });
 });

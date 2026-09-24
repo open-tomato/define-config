@@ -1,3 +1,10 @@
+- the hooked entry is also reported as unreachable, so the diagnostics are unknown-step plus unreachable, not unknown-step alone
+  trigger: when asserting diagnostics for a flow whose hooked step is an explicit entry with an unresolved when: anchor
+  kind: gotcha
+  cause: a step with when: is an explicit entry that no edge reaches
+  resolution: filter to the unknown-step code before asserting the count
+  artifact: +   "unreachable",
+  signal: loud
 - progress.txt was already emptied (84 lines removed) in the working tree before the session started, and will be committed with this task
   trigger: when the loop runs git add -A after this task
   kind: gotcha
