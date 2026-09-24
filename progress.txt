@@ -1,3 +1,17 @@
+- src/index.test.ts pins the function count in a test title as well as in FUNCTIONS
+  trigger: when adding a public function to src/index.ts
+  kind: location
+  cause: the title 'exports exactly the six functions' names the count in words
+  resolution: update the title along with the FUNCTIONS list
+  artifact: exports exactly the six functions
+  signal: silent
+- check-types rejects the fixture while bun test passes
+  trigger: when a test compares provenance records against an untyped object-literal fixture
+  kind: gotcha
+  cause: a literal widens kind to string, not ProvenanceKind, and bun's toEqual is typed against the received type
+  resolution: annotate the fixture as readonly ProvenanceRecord[]
+  artifact: Type 'string' is not assignable to type 'ProvenanceKind'.
+  signal: loud
 - Object.freeze on a Map does not stop Map.prototype.set
   trigger: when freezing a ReadonlyMap returned from a public API
   kind: gotcha
