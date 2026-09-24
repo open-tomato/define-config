@@ -89,6 +89,26 @@ set to `true` is a type error as it is in a `ConfigEntry`.
 The merged value never shares a plain object or an array with an entry, and no entry is changed.
 Functions and class instances (a `Date`, a `Map`) are values: they are kept by reference.
 
+`result.provenance` records which entries touched which key path. It maps each dot-joined path
+(`''` for a `$replace: true` on an entry itself) to that path's records in entry order, each
+`{ entry, kind }` plus `layer` when the entry has a `$layer`. The last record names the entry that
+last touched the path. `kind` is `set`, `remove` (a `false` there; when last, the path is absent)
+or `replace` (a `$replace: true` there). Paths below a replaced key keep their earlier records, so
+a path can end on `set` and still be absent because an ancestor was replaced. The map, its record
+arrays and its records are frozen copies.
+
+```ts
+import { merge } from '@open-tomato/define-config';
+
+const result = merge([
+  { a: { x: 1 } },
+  { $layer: 'project', a: { x: 2 } },
+]);
+
+console.log(result.provenance.get('a.x'));
+// [{ entry: 0, kind: 'set' }, { entry: 1, layer: 'project', kind: 'set' }]
+```
+
 ## validate
 
 Run a Standard Schema V1 schema over a value and report every issue it raises as a `schema`
