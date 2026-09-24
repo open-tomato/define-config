@@ -1,3 +1,10 @@
+- grep -c prints 0 but exits 1 when there are no matches
+  trigger: when counting secrets references with grep -c
+  kind: gotcha
+  cause: grep exit status reflects match presence, not the count
+  resolution: read the printed count, and treat exit 1 as expected here
+  artifact: 0
+  signal: silent
 - Publishing section reorganized into three subsections for clarity
   trigger: documentation scope in task definition
   kind: pattern
