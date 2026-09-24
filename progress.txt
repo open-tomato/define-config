@@ -1,3 +1,10 @@
+- the flow start name is at result.graph.flows.<flow>.start, not on the result root
+  trigger: when reading the start step from resolveGraph output
+  kind: location
+  cause: resolveGraph returns a { graph: { nodes, edges, hooks, flows } } wrapper
+  resolution: read g.graph.flows.f.start
+  artifact: graph.flows.f.start
+  signal: silent
 - Test 1: $start valid ref → start=f.first ✓; Test 2: $start unknown → start='' + unknown-step error ✓; Test 3: $start omitted → starts at first ✓; Test 4: $unattended works ✓; Test 5: step/on/expect keys recognized ✓; Test 6: sugar keys (onTrue/onFalse) fold ✓; Test 7: when: hooks work ✓
   trigger: scratch run output
   kind: location
