@@ -49,7 +49,7 @@ bun run build
 - `bun run check-types` includes test files; `@ts-expect-error` in a test is a real type assertion.
 - `bun test` discovers and runs `**/*.test.ts` files in parallel.
 - `bun run build` removes `dist/`, bundles to ESM, and emits TypeScript declarations. `tsconfig.build.json` excludes `src/**/*.test.ts` and `src/**/fixtures/**`, so neither test files nor `.ts` files under `src/loader/fixtures/` get declarations in `dist/`; tests still compile under `tsconfig.json`.
-- `bun run check-pack` asserts the required files are in the pack, that the pack holds nothing outside the allow-list (`package.json`, `README.md`, `LICENSE`, `NOTICE`, `dist/index.js`, and each `dist/**/*.d.ts` whose `src/**/*.ts` module is neither a `*.test.ts` file nor under a `fixtures/` directory), and that the manifest has no `dependencies`. It names each path outside the allow-list.
+- `bun run check-pack` asserts the required files are in the pack, that the pack holds nothing outside the allow-list (`package.json`, `README.md`, `LICENSE`, `NOTICE`, `dist/index.js`, and each `dist/**/*.d.ts` whose `src/**/*.ts` module is neither a `*.test.ts` file nor under a `fixtures/` directory), and that the manifest has no `dependencies`. It names each path outside the allow-list. Before testing it with a planted file, read [context/packaging.md](context/packaging.md).
 
 ## ESLint Style Law for Agent Sessions
 
