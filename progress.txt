@@ -1,3 +1,17 @@
+- bun test reports 427 pass, not the 398 recorded for 9e09c35
+  trigger: comparing the bun test count with the plan context
+  kind: location
+  cause: tests added by earlier tasks in this plan (420) plus the 7 added here
+  resolution: none needed; note it for the close-out count
+  artifact: 427 pass
+  signal: silent
+- a **/ sequence in a glob closes the block comment early
+  trigger: writing TSDoc that mentions a dist/**/*.d.ts or src/**/*.ts glob inside a /** */ block
+  kind: gotcha
+  cause: the */ in **/*.ts ends the JSDoc comment
+  resolution: spell the pattern in prose, for example a .d.ts declaration under dist/
+  artifact: **/*.d.ts
+  signal: silent
 - bun test reports 420 pass, not the 398 recorded at 9e09c35
   trigger: comparing the test count with the plan context
   kind: location
