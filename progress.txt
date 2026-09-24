@@ -1,3 +1,10 @@
+- The dist/index.d.ts declaration test only matched interface, type, function and namespace, so it reported an exported class as undeclared
+  trigger: when exporting a class from src/index.ts
+  kind: gotcha
+  cause: The pattern in src/index.test.ts had no `class` alternative
+  resolution: Added `class` to the pattern. A control run with it removed exits 1
+  artifact: every re-exported name is declared, not merely named, by the file it comes from
+  signal: loud
 - the default import fc triggers import/no-named-as-default-member warnings
   trigger: when importing fast-check in this repo
   kind: pattern
