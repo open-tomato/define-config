@@ -12,6 +12,9 @@
  * - {@link validate} and {@link validateSections} run Standard Schema V1
  *   schemas over it;
  * - {@link resolveGraph} turns its `flows` section into a step graph;
+ * - {@link next}, {@link hooksOf}, {@link reachable} and {@link walkOrder}
+ *   read a resolved graph: an outcome's target, a node's hooks, the nodes
+ *   reached from a flow's start, and the order a flow's nodes are placed in;
  * - {@link createLoader} finds, reads, merges, validates and resolves the
  *   config files of each layer.
  *
@@ -37,6 +40,7 @@ export type { ConfigEntry, LayeredEntry } from './types';
 
 export { defineConfig } from './define-config';
 export { resolveGraph } from './graph';
+export { hooksOf, next, reachable, walkOrder } from './graph/walk';
 export { createLoader } from './loader';
 export { merge } from './merge';
 export { provenanceOf } from './provenance';

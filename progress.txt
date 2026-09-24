@@ -1,0 +1,71 @@
+- the new CLOSEOUT file under .rafa/plans does not appear in git status, so .rafa appears gitignored and `git add -A` may skip it
+  trigger: when checking whether the close-out file will be committed
+  kind: gotcha
+  cause: gitignore rule covering .rafa
+  resolution: runner may need to force-add the file
+  artifact: ?? .rafa/plans/CLOSEOUT-rafa-16-graph-helpers-runner.md
+  signal: silent
+- `$c` holding 'bun run lint' is not word-split in zsh, so every command exits 127
+  trigger: when looping over gate commands in zsh with a quoted string variable
+  kind: gotcha
+  cause: zsh does not split unquoted variable expansions by default
+  resolution: run each gate as its own literal command
+  artifact: (eval):1: command not found: bun run lint
+  signal: loud
+- console.log output formatting in README examples matches Bun output with double quotes in arrays
+  trigger: when adding documentation code examples
+  kind: pattern
+  cause: Bun's console.log stringifies with double quotes, not single
+  resolution: wrapped comments match the actual runtime output exactly
+  artifact: // { before: [ "build.format" ], after: [] }
+  signal: silent
+- reachable lists the hook node after the hooked node, not before it
+  trigger: when asserting reachable() order for a flow with a before hook
+  kind: gotcha
+  cause: the successor function follows edges and then anchor to hooked node, so the hook is reached after the edge target
+  resolution: pin the walk order (lint, test, format), or assert membership only
+  artifact: build.test
+    +   "build.format"
+  signal: loud
+- several of those fixtures legitimately produce errors, such as interactive-unattended and a `when` on an unregistered-pure step, so a blanket no-errors assertion fails
+  trigger: when asserting no error diagnostics on the reachability.test.ts fixtures
+  kind: gotcha
+  cause: the fixtures exercise diagnostics rather than being clean flows
+  resolution: assert the no-error shape only on the walk.test.ts fixture, and skip it for the reachability.test.ts fixtures
+  artifact: `when` sits on step "ask", which is not registered as pure
+  signal: loud
+- a flow with no entries (idle: {}) resolves to start '' with no diagnostics, while a $start naming nothing adds an unknown-step error
+  trigger: when a test needs a flow whose start is empty without any error diagnostic
+  kind: pattern
+  cause: startOf returns '' for a flow with no entries without reporting anything
+  resolution: use an empty flow as the start-'' fixture
+  artifact: start: ''
+  signal: silent
+- every entry carrying when: must run a step registered pure: true, or build reports impure-when
+  trigger: when building a when: hook fixture through resolveGraph
+  kind: pattern
+  cause: buildWhen checks spec.pure
+  resolution: register the hooked steps (lint, format, stamp) with pure: true and reuse them through step: for extra hook entries
+  artifact: impure-when
+  signal: loud
+- import/order puts ./index in its own index group after siblings, separated by a blank line
+  trigger: when a test file under src/graph imports both a sibling module and ./index
+  kind: gotcha
+  cause: the import/order groups end with sibling then index
+  resolution: import from ./walk first, then a blank line, then import from ./index
+  artifact: `./walk` import should occur before import of `./index`
+  signal: loud
+- The claim is false in general: in a flow with no diagnostics whose $start comes after the target of a repeat: true loop, the target is in reachable but not in walkOrder
+  trigger: when checking the next task's claim that the set of walkOrder equals the set of reachable
+  kind: gotcha
+  cause: reachable follows repeat: true edges and walkOrder never does, and cycles picks the back edge by Graph.nodes order, not by the flow start, so no cycle error flags this shape
+  resolution: The walk.test.ts fixtures also reach the repeat target through a hook, so the two sets stay equal; the next task must check that the reachability.test.ts flows it uses have no node reached only through a repeat: true edge
+  artifact: reachable [ "f.b", "f.a", "f.c" ] walkOrder [ "f.b", "f.c" ]
+  signal: silent
+- /tmp/x already exists as a directory, so the redirect failed and the gate showed exit 1
+  trigger: when redirecting gate output to /tmp/x
+  kind: gotcha
+  cause: a leftover directory on the host
+  resolution: redirect to a unique file name such as /tmp/dc-test.log
+  artifact: is a directory: /tmp/x
+  signal: loud

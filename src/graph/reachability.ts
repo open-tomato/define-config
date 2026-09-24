@@ -34,25 +34,7 @@ import type { FlowSummary, GraphNode } from './types';
 
 import { error, warn } from '../diagnostics';
 
-/** The nodes one step of the walk leads to from each node: edge targets and hooked nodes. */
-function successors(built: Pick<BuildResult, 'graph'>): Map<string, string[]> {
-  const out = new Map<string, string[]>();
-  const link = (from: string, to: string): void => {
-    const list = out.get(from);
-    if (list === undefined) {
-      out.set(from, [to]);
-    } else {
-      list.push(to);
-    }
-  };
-  for (const edge of built.graph.edges) {
-    link(edge.from, edge.to);
-  }
-  for (const hook of built.graph.hooks) {
-    link(hook.anchor, hook.node);
-  }
-  return out;
-}
+import { successors } from './successors';
 
 /** Every node key the walk from `start` reaches, `start` included. */
 function walk(start: string, next: ReadonlyMap<string, readonly string[]>): Set<string> {
@@ -113,7 +95,7 @@ function check(
  * flow by flow in node order, each at a path rooted at `flows`.
  */
 export function reachability(built: Pick<BuildResult, 'graph' | 'sources'>): readonly Diagnostic[] {
-  const next = successors(built);
+  const next = successors(built.graph);
   return Object.values(built.graph.flows).flatMap((flow) => {
     if (flow.start === '') {
       return [];

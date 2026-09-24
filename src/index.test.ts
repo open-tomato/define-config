@@ -14,11 +14,15 @@ const BUILD_TIMEOUT_MS = 120_000;
 const FUNCTIONS = [
   'createLoader',
   'defineConfig',
+  'hooksOf',
   'merge',
+  'next',
   'provenanceOf',
+  'reachable',
   'resolveGraph',
   'validate',
   'validateSections',
+  'walkOrder',
 ];
 
 /** The types the package declares beside the functions. */
