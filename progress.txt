@@ -1,3 +1,17 @@
+- a cross-area value import sits in the parent group right after the ../diagnostics import, and lint accepted it without changes
+  trigger: when a graph or loader module imports a merge helper
+  kind: pattern
+  cause: import/order sorts the parent group alphabetically
+  resolution: place ../merge/plain-object after ../diagnostics
+  artifact: import should occur before import of
+  signal: loud
+- the build emits a declaration file for an internal module even though src/index.ts does not export it
+  trigger: when adding an internal module under src/
+  kind: gotcha
+  cause: tsconfig.build.json excludes only src/**/*.test.ts, so every non-test source file gets a .d.ts
+  resolution: none needed; it is absent from dist/index.d.ts so it is not public API
+  artifact: dist/merge/plain-object.d.ts
+  signal: silent
 - artifact: PLAN_TRACKER-rafa-13-0-1-1.md: A `$replace: true` on the entry itself replaces the whole value merged so far
 - the first-character helper (Heads string plus Chars) now exists word for word in both src/types.ts (RootIdHeads) and src/graph/types.ts (StepIdHeads)
   trigger: when adding a $-excluding key set in src/types.ts

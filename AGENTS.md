@@ -48,8 +48,8 @@ bun run build
 - `bun run lint` runs ESLint over `src/`, `scripts/`, and root-level files. Ignores `dist/`, `node_modules/`, `.claude/`, `.rafa/`. `.md` files get `markdown/recommended` with no code-block processor, so fenced `ts` blocks in `README.md` are never parsed: no gate checks README examples. Verify them by extracting each block and running `tsc` against `src/index.ts` (use a non-dot temp dir; `tsc` include globs skip dot-directories).
 - `bun run check-types` includes test files; `@ts-expect-error` in a test is a real type assertion.
 - `bun test` discovers and runs `**/*.test.ts` files in parallel.
-- `bun run build` removes `dist/`, bundles to ESM, and emits TypeScript declarations. `tsconfig.build.json` excludes only `src/**/*.test.ts`, so `.ts` files under `src/loader/fixtures/` also get declarations in `dist/` and ship in the tarball.
-- `bun run check-pack` asserts the required files are in the pack and the manifest has no `dependencies`; it does not refuse unexpected files, so it passes with the fixture declarations above.
+- `bun run build` removes `dist/`, bundles to ESM, and emits TypeScript declarations. `tsconfig.build.json` excludes `src/**/*.test.ts` and `src/**/fixtures/**`, so neither test files nor `.ts` files under `src/loader/fixtures/` get declarations in `dist/`; tests still compile under `tsconfig.json`.
+- `bun run check-pack` asserts the required files are in the pack and the manifest has no `dependencies`; it does not refuse unexpected files.
 
 ## ESLint Style Law for Agent Sessions
 
