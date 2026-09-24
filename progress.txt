@@ -1,3 +1,17 @@
+- bun test reports 420 pass, not the 398 recorded at 9e09c35
+  trigger: comparing the test count with the plan context
+  kind: location
+  cause: presumably the tests added by earlier tasks in this plan
+  resolution: none needed; noted for the close-out count
+  artifact: 420 pass
+  signal: silent
+- fixture .ts files under src/loader/fixtures got declarations emitted into dist
+  trigger: running bun run build with only test files excluded
+  kind: gotcha
+  cause: tsconfig.build.json includes all of src and excluded only *.test.ts
+  resolution: exclude src/**/fixtures/** in tsconfig.build.json
+  artifact: dist/loader/fixtures/acceptance/project/rafa.config.d.ts
+  signal: silent
 - a cross-area value import sits in the parent group right after the ../diagnostics import, and lint accepted it without changes
   trigger: when a graph or loader module imports a merge helper
   kind: pattern
