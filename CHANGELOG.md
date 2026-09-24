@@ -2,6 +2,10 @@
 
 One section per released version, newest first, headed `## <version> — <date>, <release title>`. All additions to the public surface carry a change note.
 
+## 0.5.1 — 2026-09-24, one `bun run gates` command that CI and agents both run
+
+- **tooling**: `bun run gates` removes `dist/` and runs `lint`, `check-types`, `test`, `build`, `check-pack` and `check-node` in that order, one line per gate, stopping at the first non-zero exit with that code; `check-node` no longer builds on its own and is skipped with a printed line when no real `node` is on `PATH`, except under `CI=true`, where that fails the run; CI runs only `bun run gates`, and `AGENTS.md` names it as the one command to run before reporting done.
+
 ## 0.5.0 — 2026-09-24, reload a changed config file within one process
 
 - **createLoader**: `LoaderOptions.reload` (default `false`) makes `load` read a `.ts`, `.mts`, `.mjs` or `.js` config file's bytes and import it again only when they changed, so a host that keeps one process across edits sees the edit on its next `load` and an unchanged file keeps its cached module; modules the config file imports stay cached, each distinct content stays in the runtime's module registry for the process's life, a file that cannot be read is `load-failed`, and a non-boolean `reload` is a `TypeError`.
