@@ -1,3 +1,9 @@
+- Publishing section reorganized into three subsections for clarity
+  trigger: documentation scope in task definition
+  kind: pattern
+  cause: expanded content requires better organization
+  artifact: Registry and Access / Package Content / Release Process subsections
+  signal: silent
 - actionlint exits 1 on an unquoted expansion, even though shellcheck rates it only info
   trigger: when passing an optional flag through an env var into a run step
   kind: gotcha
