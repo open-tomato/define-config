@@ -1,3 +1,10 @@
+- bun run puts a node shim that is bun on PATH, so Bun.which('node') always finds one; the probe must run the candidate and check process.versions.bun
+  trigger: when running bun run gates with no real node on PATH
+  kind: gotcha
+  cause: bun run prepends a bun-node-<hash> dir holding a node link to bun
+  resolution: findRealNode runs the candidate and treats bun as no node
+  artifact: check-node: skipped (no node on PATH)
+  signal: silent
 - artifact: PLAN_TRACKER-rafa-28-bun-run-gates.md: Bun.which('node')
 - bun run prepends a temp dir with a node shim (bun) to PATH, so Bun.which('node') inside gates.ts is never null; the skip line and the CI=true failure are unreachable, and check-node runs under bun's shim rather than real Node
   trigger: when running bun run gates with node removed from PATH
