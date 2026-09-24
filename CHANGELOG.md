@@ -2,6 +2,10 @@
 
 One section per released version, newest first, headed `## <version> — <date>, <release title>`. All additions to the public surface carry a change note.
 
+## 0.4.0 — 2026-09-24, canonicalize and digest — a byte-stable text of a config or graph, and its hash
+
+- **digest**: `canonicalize`, `digest` and `CanonicalizeError` are exported from the package entry: `canonicalize` writes any value as byte-stable JSON text (keys sorted by UTF-16 code unit, `-0` as `0`, `Date`, `Map`, `Set` and functions as `$date`, `$map`, `$set` and `$function` tags, a function by name and never by body, a shared reference written twice), `digest` returns `sha256:` and the hex SHA-256 of that text, synchronously from `node:crypto`, and both throw a `CanonicalizeError` with `code: 'cyclic-value' | 'not-canonical'` and the `path` to the offending value; README's new `## canonicalize and digest` section digests `result.value`, `result.config` or `result.graph`, never a whole result.
+
 ## 0.3.0 — 2026-09-24, Graph helpers a runner drives a resolved graph with
 
 - **graph**: `next`, `hooksOf`, `reachable` and `walkOrder` are exported from the package entry, pure functions a runner steps through a resolved `Graph` with: `next` answers the node an outcome leads to (`undefined` for a declared outcome with no handler, a `RangeError` for an unknown node or an undeclared outcome), `hooksOf` the `before` and `after` hooks of a node in declaration order, `reachable` every node a flow reaches from its `start` (`repeat: true` edges and hooks included), and `walkOrder` the depth-first order a flow's nodes are placed in, which never follows a `repeat: true` edge; README's new `### Driving a graph` section drives a flow with them.

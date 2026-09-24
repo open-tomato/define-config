@@ -368,6 +368,52 @@ console.log(last, file?.path);
 // { entry: 1, layer: 'project', kind: 'set' } '/work/project/rafa.config.ts'
 ```
 
+## canonicalize and digest
+
+`canonicalize(value)` writes any value as canonical JSON text: no whitespace, plain object keys
+sorted by UTF-16 code unit at every level (with arrays, functions, class instances, and tagged
+objects handled distinctly). Numbers are written with `-0` as `0`. The four tagged types use the
+`$` namespace: `$date` for `Date` (ISO string), `$map` for `Map` (sorted by key text then value
+text), `$set` for `Set` (sorted by member text), and `$function` for functions (by name only—the
+body is never read, so body changes do not change the digest). Class instances are written as
+plain objects by their own enumerable string keys. Shared references (the same object or array
+reached by two paths) are written twice, never refused. Cyclic references—where a value contains
+itself—throw `CanonicalizeError` with `code: 'cyclic-value'` and `path: string[]`, the key path
+from the root to the cycle. `NaN`, `±Infinity`, `bigint`, symbols, `undefined` wherever it would
+be written (the root, an array element, a `Map` key or value, a `Set` member; only an object
+property that is `undefined` is dropped), invalid `Date` objects, and any object whose only
+written key is one of the four tag names throw `CanonicalizeError` with `code: 'not-canonical'`
+and `path`. `digest(value)` returns
+`'sha256:' + sha256_hex(canonicalize(value))`, synchronous from `node:crypto`.
+
+A host digests one of `result.value`, `result.config` or `result.graph` to represent a merged
+config, schema validation, or flow resolution—never the whole `result` object itself.
+
+```ts
+import { merge, canonicalize, digest } from '@open-tomato/define-config';
+
+// Merge two entries
+const result = merge([
+  { name: 'app', port: 8000, tags: new Set(['web', 'prod']) },
+  { port: 9000 },
+]);
+
+const value = result.value;
+
+// canonicalize produces a sorted, deterministic JSON text
+console.log(canonicalize(value));
+// {"name":"app","port":9000,"tags":{"$set":["prod","web"]}}
+
+// digest returns the SHA-256 hash
+console.log(digest(value));
+// sha256:d3dc407e4672bb0247355c4c613df22e90e38b21dcff374587a33900944df9f7
+
+// After one value changes
+const modified = { ...value, port: 9001 };
+console.log(digest(modified));
+// sha256:6b5fa5986e16ad86a6932792a0274db414f015b3b40d00650000e7fa7020ebcc
+```
+
 ## Diagnostic Codes
 
 Every diagnostic the library emits has a stable, machine-readable code. Use it to match, log or

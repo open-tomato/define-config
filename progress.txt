@@ -1,71 +1,82 @@
-- the new CLOSEOUT file under .rafa/plans does not appear in git status, so .rafa appears gitignored and `git add -A` may skip it
-  trigger: when checking whether the close-out file will be committed
+- including the fence line makes bun fail on the extracted file
+  trigger: when extracting the README example block with awk or sed for a bun run
   kind: gotcha
-  cause: gitignore rule covering .rafa
-  resolution: runner may need to force-add the file
-  artifact: ?? .rafa/plans/CLOSEOUT-rafa-16-graph-helpers-runner.md
-  signal: silent
-- `$c` holding 'bun run lint' is not word-split in zsh, so every command exits 127
-  trigger: when looping over gate commands in zsh with a quoted string variable
-  kind: gotcha
-  cause: zsh does not split unquoted variable expansions by default
-  resolution: run each gate as its own literal command
-  artifact: (eval):1: command not found: bun run lint
+  cause: the line range or awk pattern kept the opening three-backtick ts fence
+  resolution: take only the lines between the fences (README lines 391-411) and rewrite the package import to dist/index.js
+  artifact: error: Unterminated string literal
   signal: loud
-- console.log output formatting in README examples matches Bun output with double quotes in arrays
-  trigger: when adding documentation code examples
+- README maintains 123-character wrap width
+  trigger: wrap width measurement
   kind: pattern
-  cause: Bun's console.log stringifies with double quotes, not single
-  resolution: wrapped comments match the actual runtime output exactly
-  artifact: // { before: [ "build.format" ], after: [] }
-  signal: silent
-- reachable lists the hook node after the hooked node, not before it
-  trigger: when asserting reachable() order for a flow with a before hook
-  kind: gotcha
-  cause: the successor function follows edges and then anchor to hooked node, so the hook is reached after the edge target
-  resolution: pin the walk order (lint, test, format), or assert membership only
-  artifact: build.test
-    +   "build.format"
+  cause: Hand-wrapped prose with careful line breaks
+  resolution: All new prose fits within established width constraint
+  artifact: max width: 123
   signal: loud
-- several of those fixtures legitimately produce errors, such as interactive-unattended and a `when` on an unregistered-pure step, so a blanket no-errors assertion fails
-  trigger: when asserting no error diagnostics on the reachability.test.ts fixtures
-  kind: gotcha
-  cause: the fixtures exercise diagnostics rather than being clean flows
-  resolution: assert the no-error shape only on the walk.test.ts fixture, and skip it for the reachability.test.ts fixtures
-  artifact: `when` sits on step "ask", which is not registered as pure
-  signal: loud
-- a flow with no entries (idle: {}) resolves to start '' with no diagnostics, while a $start naming nothing adds an unknown-step error
-  trigger: when a test needs a flow whose start is empty without any error diagnostic
+- SHA-256 digests are deterministic and change predictably when values change
+  trigger: example output verification
   kind: pattern
-  cause: startOf returns '' for a flow with no entries without reporting anything
-  resolution: use an empty flow as the start-'' fixture
-  artifact: start: ''
-  signal: silent
-- every entry carrying when: must run a step registered pure: true, or build reports impure-when
-  trigger: when building a when: hook fixture through resolveGraph
+  cause: Both port 9000 and port 9001 produce consistent, different hashes
+  resolution: Example output is accurate and matches the comments
+  artifact: sha256:d3dc407e4672bb0247355c4c613df22e90e38b21dcff374587a33900944df9f7
+  signal: loud
+- BSD sed -i rejects the edit and leaves the file unchanged
+  trigger: when running sed -i with a pattern containing quotes on macOS
+  kind: gotcha
+  cause: BSD sed needs a backup-suffix argument and different quoting
+  resolution: use perl -pi -e or the Edit tool
+  artifact: unterminated substitute pattern
+  signal: loud
+- Diagnostic uses the field level, not severity
+  trigger: when filtering LoadResult diagnostics by error severity in a test
+  kind: gotcha
+  cause: the interface declares level: DiagnosticLevel
+  resolution: filter with d.level === 'error'
+  artifact: Property 'severity' does not exist on type 'Diagnostic'
+  signal: loud
+- The dist/index.d.ts declaration test only matched interface, type, function and namespace, so it reported an exported class as undeclared
+  trigger: when exporting a class from src/index.ts
+  kind: gotcha
+  cause: The pattern in src/index.test.ts had no `class` alternative
+  resolution: Added `class` to the pattern. A control run with it removed exits 1
+  artifact: every re-exported name is declared, not merely named, by the file it comes from
+  signal: loud
+- the default import fc triggers import/no-named-as-default-member warnings
+  trigger: when importing fast-check in this repo
   kind: pattern
-  cause: buildWhen checks spec.pure
-  resolution: register the hooked steps (lint, format, stamp) with pure: true and reuse them through step: for extra hook entries
-  artifact: impure-when
+  cause: eslint import plugin flags fc.assert and similar member access
+  resolution: use named imports: import { assert, jsonValue, property } from 'fast-check'
+  artifact: import/no-named-as-default-member
   signal: loud
-- import/order puts ./index in its own index group after siblings, separated by a blank line
-  trigger: when a test file under src/graph imports both a sibling module and ./index
+- jsonValue can produce an object whose only key is $date, $map, $set or $function, which canonicalize refuses as not-canonical
+  trigger: when generating values with fc.jsonValue() for canonicalize properties
   kind: gotcha
-  cause: the import/order groups end with sibling then index
-  resolution: import from ./walk first, then a blank line, then import from ./index
-  artifact: `./walk` import should occur before import of `./index`
+  cause: the tag-imitation refusal applies to any plain object with a lone tag key
+  resolution: filter generated values with a recursive check for lone tag-key objects
+  artifact: not-canonical
   signal: loud
-- The claim is false in general: in a flow with no diagnostics whose $start comes after the target of a repeat: true loop, the target is in reachable but not in walkOrder
-  trigger: when checking the next task's claim that the set of walkOrder equals the set of reachable
-  kind: gotcha
-  cause: reachable follows repeat: true edges and walkOrder never does, and cycles picks the back edge by Graph.nodes order, not by the flow start, so no cycle error flags this shape
-  resolution: The walk.test.ts fixtures also reach the repeat target through a hook, so the two sets stay equal; the next task must check that the reachability.test.ts flows it uses have no node reached only through a repeat: true edge
-  artifact: reachable [ "f.b", "f.a", "f.c" ] walkOrder [ "f.b", "f.c" ]
+- tsc -p tsconfig.build.json emits dist/digest/canonicalize.d.ts even though index.ts does not export it yet
+  trigger: when running bun run build after adding an unexported src module
+  kind: location
+  cause: the build tsconfig covers all non-test src files, not only the index graph
+  resolution: expected; same as every other src module
   signal: silent
-- /tmp/x already exists as a directory, so the redirect failed and the gate showed exit 1
-  trigger: when redirecting gate output to /tmp/x
+- the plan names undefined only in arrays and at the root; dropping it in a Map or Set would make new Map([['a', undefined]]) print the same as an empty Map
+  trigger: when deciding how canonicalize handles undefined inside a Map or Set
   kind: gotcha
-  cause: a leftover directory on the host
-  resolution: redirect to a unique file name such as /tmp/dc-test.log
-  artifact: is a directory: /tmp/x
+  cause: the spec does not cover Map or Set members
+  resolution: refuse undefined anywhere it would be written; only object properties are dropped
+  signal: silent
+- the literal rule lets { $date: 'x', y: undefined } and a class instance with only a $date key print as a tagged Date
+  trigger: when applying the plan's rule that refuses a plain object whose only own key is a tag name
+  kind: gotcha
+  cause: undefined properties are dropped and class instances are written like plain objects, so own keys differ from written keys
+  resolution: apply the tag guard to the written keys of any object written by its keys
+  artifact: {"$date":"x"}
+  signal: silent
+- TypeScript does not narrow the default branch of a typeof switch to object, so passing value on fails
+  trigger: when switching on typeof value and handling objects in the default branch
+  kind: gotcha
+  cause: narrowing only applies to an explicit case 'object' label
+  resolution: use case 'object': instead of default; the switch is then exhaustive under noImplicitReturns
+  artifact: error TS2345: Argument of type '{} | undefined' is not assignable to parameter of type 'object'.
   signal: loud
