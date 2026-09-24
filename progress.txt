@@ -1,3 +1,10 @@
+- indexed access yields number | undefined, which fails toBe(number) type checks
+  trigger: when writing tests that index result.sources under noUncheckedIndexedAccess
+  kind: gotcha
+  cause: check-types includes test files with strict index checks; bun test does not check types
+  resolution: use ?? fallback or optional chaining before passing to expect
+  artifact: Argument of type 'number | undefined' is not assignable to parameter of type 'number'
+  signal: loud
 - a non-dot temp dir with a tsconfig extending ../tsconfig.json and include [block.ts] type-checks the block against src/index.ts
   trigger: when type-checking a README ts fence by extraction
   kind: pattern

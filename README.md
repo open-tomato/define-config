@@ -81,10 +81,12 @@ console.log(withRequired.diagnostics);
 The two entries sit in different layers. Without the `$layer` labels they would share the implicit
 layer, and entry 1 setting `a` again would also produce a `duplicate-key` warning at `a`.
 
-An entry typed as `LayeredEntry<T>` takes `$layer` as a string whether the root of `T` has named
-keys or is a keyed map. When the root is a keyed map, its ids are typed as strings that start with
-a printable ASCII character other than `$`, so a misspelt `$lyer` is a type error, and a root id
-set to `true` is a type error as it is in a `ConfigEntry`.
+An entry typed as `LayeredEntry<T>` takes `$layer` as a string and `$replace` as the literal
+`true` whether the root of `T` has named keys or is a keyed map; a root `$replace: true` replaces
+the whole value merged so far, and any other `$replace` value is a type error. When the root is a
+keyed map, its ids are typed as strings that start with a printable ASCII character other than
+`$`, so a misspelt `$lyer` is a type error, and a root id set to `true` is a type error as it is
+in a `ConfigEntry`.
 
 The merged value never shares a plain object or an array with an entry, and no entry is changed.
 Functions and class instances (a `Date`, a `Map`) are values: they are kept by reference.

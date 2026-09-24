@@ -196,7 +196,8 @@ type RootId = `${Chars<RootIdHeads>}${string}`;
 
 /**
  * Maps skeleton `S` to the values of a layered entry: `$layer` to a string,
- * every other key as {@link EntryAt} types it. A `string` index key is
+ * `$replace` to the literal `true`, every other key as {@link EntryAt}
+ * types it. A `string` index key is
  * renamed to {@link RootId}; its value is still computed from the original
  * key, so a root id takes exactly what a keyed-map id takes in a
  * {@link ConfigEntry}. The `as` clause keeps the skeleton's `?` modifiers.
@@ -206,7 +207,9 @@ type LayeredShape<S, T, Required extends string> = {
     ? RootId
     : K]: K extends '$layer'
     ? string
-    : EntryAt<T, Required, K>;
+    : K extends '$replace'
+      ? true
+      : EntryAt<T, Required, K>;
 };
 
 /**
@@ -215,8 +218,14 @@ type LayeredShape<S, T, Required extends string> = {
  * `'project'` or any string); two entries of the same layer that set the
  * same key are duplicates, entries of different layers override silently.
  *
- * `$layer` is a named optional property of the same mapped type as the
- * entry's keys, so it compiles over any config root, a keyed map included.
+ * `$replace` may be set to `true` at the root too: at merge time the entry
+ * then stands in for the whole merged value so far, discarding what earlier
+ * entries set, as a `$replace` does on a subtree. Any other `$replace` value
+ * is a type error.
+ *
+ * `$layer` and `$replace` are named optional properties of the same mapped
+ * type as the entry's keys, so they compile over any config root, a keyed
+ * map included.
  * When the root is a keyed map, its ids are typed as the strings that start
  * with a printable ASCII character other than `$`: a root id that is empty,
  * starts with `$` or starts with a non-ASCII character is refused by the
@@ -237,7 +246,7 @@ export type LayeredEntry<T, Required extends string = never> = T extends Leaf | 
   ? never
   : T extends object
     ? LayeredShape<
-      { $layer?: 0 } & OptionalKeys<T> & { [K in RequiredIds<T, Required>]?: 0 },
+      { $layer?: 0; $replace?: 0 } & OptionalKeys<T> & { [K in RequiredIds<T, Required>]?: 0 },
       T,
       Required
     >
