@@ -1,3 +1,10 @@
+- progress.txt was already modified in the working tree, and git add -A will commit it with this task
+  trigger: when running git diff before the loop commits
+  kind: gotcha
+  cause: the loop's own progress file is not ignored by git
+  resolution: left untouched
+  artifact: progress.txt
+  signal: silent
 - lint fails the static import even with dist/ present, because the gate lint pass runs after gates removes dist/
   trigger: when the static dist import is added to scripts/reload-node.mjs with dist/ built
   kind: pattern
