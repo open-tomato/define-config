@@ -1,3 +1,10 @@
+- community markdown files use wider wrapping than code files
+  trigger: wrap width measurement for community files
+  kind: pattern
+  cause: different readability expectations for documentation vs code examples
+  resolution: measured README.md (123 chars for code examples) vs SECURITY.md (240) and confirmed CONTRIBUTING.md fits the community file pattern
+  artifact: CONTRIBUTING.md max line: 232 characters
+  signal: silent
 - grep -c prints 0 but exits 1 when there are no matches
   trigger: when counting secrets references with grep -c
   kind: gotcha

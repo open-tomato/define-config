@@ -1,5 +1,9 @@
 # define-config
 
+[![CI status](https://github.com/open-tomato/define-config/actions/workflows/ci.yml/badge.svg)](https://github.com/open-tomato/define-config/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/@open-tomato/define-config)](https://www.npmjs.com/package/@open-tomato/define-config)
+[![npm provenance](https://img.shields.io/badge/npm-provenance-blue)](https://www.npmjs.com/package/@open-tomato/define-config#provenance)
+
 Typed config arrays with id-keyed merge and outcome-typed step graphs.
 Merges entries recursively with `$replace` and `$layer` support, and resolves flows.
 Validates with Standard Schema and is dependency-free.
