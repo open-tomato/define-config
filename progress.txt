@@ -1,3 +1,17 @@
+- the new CLOSEOUT file under .rafa/plans does not appear in git status, so .rafa appears gitignored and `git add -A` may skip it
+  trigger: when checking whether the close-out file will be committed
+  kind: gotcha
+  cause: gitignore rule covering .rafa
+  resolution: runner may need to force-add the file
+  artifact: ?? .rafa/plans/CLOSEOUT-rafa-16-graph-helpers-runner.md
+  signal: silent
+- `$c` holding 'bun run lint' is not word-split in zsh, so every command exits 127
+  trigger: when looping over gate commands in zsh with a quoted string variable
+  kind: gotcha
+  cause: zsh does not split unquoted variable expansions by default
+  resolution: run each gate as its own literal command
+  artifact: (eval):1: command not found: bun run lint
+  signal: loud
 - console.log output formatting in README examples matches Bun output with double quotes in arrays
   trigger: when adding documentation code examples
   kind: pattern
