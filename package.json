@@ -1,0 +1,69 @@
+{
+  "name": "@open-tomato/define-config",
+  "version": "0.1.0",
+  "description": "Typed config arrays with id-keyed merge, $replace, Standard Schema validation and outcome-typed step graphs. Dependency-free.",
+  "private": false,
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/",
+    "@open-tomato:registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/open-tomato/define-config.git"
+  },
+  "homepage": "https://github.com/open-tomato/define-config#readme",
+  "bugs": {
+    "url": "https://github.com/open-tomato/define-config/issues"
+  },
+  "keywords": [
+    "config",
+    "define-config",
+    "merge",
+    "standard-schema",
+    "typescript"
+  ],
+  "license": "Apache-2.0",
+  "author": "Marcos Tomatti <marcos@opentomato.io>",
+  "packageManager": "bun@1.3.14",
+  "type": "module",
+  "sideEffects": ["./src/index.ts"],
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "NOTICE"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && bun build src/index.ts --outdir dist --target node --format esm && tsc -p tsconfig.build.json",
+    "prepack": "bun run build",
+    "test": "bun test",
+    "lint": "eslint .",
+    "check-types": "tsc --noEmit",
+    "check-pack": "bun run scripts/pack-check.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@eslint/markdown": "^8.0.3",
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "@types/bun": "^1.4.0",
+    "@typescript-eslint/parser": "^8.69.0",
+    "eslint": "^9.39.4",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-jsonc": "^3.4.2",
+    "fast-check": "^4.3.0",
+    "globals": "^17.12.0",
+    "jsonc-eslint-parser": "^3.1.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.69.0",
+    "zod": "^4.1.12"
+  }
+}
