@@ -4,6 +4,10 @@ import { describe, expect, test } from 'bun:test';
 
 import { pathToString } from '../diagnostics';
 
+import { build } from './build';
+import { flatten } from './flatten';
+import { normalise } from './normalise';
+
 import { resolveGraph } from './index';
 
 const registry: StepRegistry = {
@@ -140,5 +144,66 @@ describe('resolveGraph wiring', () => {
     // Assert
     expect(diagnostics).toEqual([]);
     expect(flows).toEqual(before);
+  });
+});
+
+describe('resolveGraph hooks', () => {
+  test('an anchor that resolves to nothing is one unknown-step and makes no hook', () => {
+    // Arrange
+    const flows = { next: { $start: 'build', build: {}, lint: { when: 'before:missing' } } };
+
+    // Act
+    const { graph, diagnostics } = resolveGraph(flows, registry);
+
+    // Assert
+    expect(diagnostics.filter((diagnostic) => diagnostic.code === 'unknown-step')).toHaveLength(1);
+    expect(graph.hooks).toEqual([]);
+  });
+
+  test('a pure step placed before an anchor gives one hook and no diagnostics', () => {
+    // Arrange
+    const flows = { next: { $start: 'build', build: { onSuccess: 'test' }, test: {}, lint: { when: 'before:test' } } };
+
+    // Act
+    const { graph, diagnostics } = resolveGraph(flows, registry);
+
+    // Assert
+    expect(diagnostics).toEqual([]);
+    expect(graph.hooks).toEqual([{ flow: 'next', node: 'next.lint', anchor: 'next.test', position: 'before' }]);
+  });
+
+  test('a before: then an after: placement come back in declaration order with flow-qualified keys', () => {
+    // Arrange
+    const flows = {
+      next: {
+        $start: 'build',
+        build: { onSuccess: 'test' },
+        test: {},
+        lint: { when: 'before:test' },
+        ask: { when: 'after:build' },
+      },
+    };
+
+    // Act
+    const { graph } = resolveGraph(flows, { ...registry, ask: { outcomes: ['yes', 'no'], pure: true } });
+
+    // Assert
+    expect(graph.hooks).toEqual([
+      { flow: 'next', node: 'next.lint', anchor: 'next.test', position: 'before' },
+      { flow: 'next', node: 'next.ask', anchor: 'next.build', position: 'after' },
+    ]);
+  });
+
+  test('graph.hooks equals the hooks of build over the same normalised and flattened flows', () => {
+    // Arrange
+    const flows = { next: { $start: 'build', build: { onSuccess: 'test' }, test: {}, lint: { when: 'before:test' } } };
+
+    // Act
+    const resolved = resolveGraph(flows, registry).graph.hooks;
+    const built = build(flatten(normalise(flows).flows), registry).graph.hooks;
+
+    // Assert
+    expect(resolved).toEqual(built);
+    expect(resolved).toHaveLength(1);
   });
 });

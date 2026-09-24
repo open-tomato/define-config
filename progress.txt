@@ -1,0 +1,21 @@
+- progress.txt was already emptied (84 lines removed) in the working tree before the session started, and will be committed with this task
+  trigger: when the loop runs git add -A after this task
+  kind: gotcha
+  cause: a change left in the working tree before this session started
+  resolution: left untouched; reported
+  artifact: progress.txt | 84 ---
+  signal: silent
+- ESLint no-unused-vars does not count a TSDoc link as a use of a type import
+  trigger: when importing a type used only in a TSDoc link
+  kind: gotcha
+  cause: the typescript-eslint no-unused-vars rule ignores links written in comments
+  resolution: leave the link name without an import, the way the repo already links Graph.nodes
+  artifact: 'GraphHook' is defined but never used
+  signal: loud
+- src/graph/types.test.ts builds a whole Graph literal, so any new required Graph field breaks check-types there as well as in the listed whole-graph assertions
+  trigger: when adding a required field to Graph
+  kind: location
+  cause: the typed Graph literal in the StepRegistry and Graph describe block
+  resolution: add the new field to that literal
+  artifact: Property 'hooks' is missing in type
+  signal: loud
