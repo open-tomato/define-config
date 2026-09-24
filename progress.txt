@@ -1,3 +1,31 @@
+- the type refuses empty, non-ASCII-first and non-reserved $-prefixed step ids, which the runtime (FLOW_RESERVED in build/flatten/normalise) still treats as step ids
+  trigger: when comparing the typed step-id set with what resolveGraph accepts at run time
+  kind: gotcha
+  cause: the template-literal exclusion can only enumerate ASCII first characters and must exclude all $ keys to keep $start and $unattended off the index
+  resolution: documented in the FlowEntry TSDoc and the README; the upside is that a misspelt $strat is now caught (TS2561 with a did-you-mean hint)
+  artifact: Did you mean to write '$start'?
+  signal: silent
+- flow[k] with k: string is now TS7053, because only template-literal index signatures exist and a string key matches none of them
+  trigger: when reading a FlowEntry with a key typed only as string
+  kind: gotcha
+  cause: a bare string is not assignable to any `${Head}${string}` pattern
+  resolution: noted in the FlowEntry TSDoc; hosts narrow the key or read through Object.entries, which still type-checks
+  artifact: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type 'FlowEntry'.
+  signal: loud
+- TypeScript has no negated template types; the exclusion has to be written as an enumerated first-character union: [id: `${Chars<Heads>}${string}`]
+  trigger: when expressing a key set that excludes a prefix in an index signature
+  kind: pattern
+  cause: index signature keys may only be string, number, symbol, template-literal patterns, or unions of these
+  resolution: enumerate printable ASCII minus $ as a string-literal type and split it with a tail-recursive Chars<S, Acc> conditional type
+  artifact: type StepId = `${Chars<StepIdHeads>}${string}`;
+  signal: silent
+- the correct shape is refused: TypeScript checks every object-literal property against an applicable index signature, named target properties included
+  trigger: when typing reserved $ keys as named properties beside a plain string index signature, even inside one homomorphic mapped type
+  kind: gotcha
+  cause: membersRelatedToIndexer does not skip properties the target also names; a string or boolean value is not assignable to StepEntry
+  resolution: type the index key as a template-literal pattern that $start and $unattended do not match, so the index signature never applies to them
+  artifact: Property '$start' is incompatible with index signature.
+  signal: loud
 - The declared onChoice property overrides the [option: string]: unknown index signature, so onChoice: 'x' is rejected; the old type made the directive unused
   trigger: when adding @ts-expect-error for a retyped field that sits beside an index signature of unknown
   kind: pattern

@@ -174,15 +174,71 @@ type EntryNode<T, Required extends string> = T extends Leaf | readonly unknown[]
 export type ConfigEntry<T, Required extends string = never> = EntryNode<T, Required>;
 
 /**
+ * The characters a root id may start with in a typed {@link LayeredEntry}:
+ * every printable ASCII character except `$`.
+ */
+type RootIdHeads = ' !"#%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~';
+
+/** Splits string `S` into the union of its characters. */
+type Chars<S extends string, Acc extends string = never> = S extends `${infer C}${infer Rest}`
+  ? Chars<Rest, Acc | C>
+  : Acc;
+
+/**
+ * The key set a root keyed map's ids take in a {@link LayeredEntry}: every
+ * string whose first character is a printable ASCII character other than
+ * `$`. TypeScript checks every property of an object literal against a
+ * plain `string` index signature, named properties included, so `$layer`
+ * beside one would have to be an entry value too; leaving `$` out of the
+ * index keys lets `$layer` be only a string.
+ */
+type RootId = `${Chars<RootIdHeads>}${string}`;
+
+/**
+ * Maps skeleton `S` to the values of a layered entry: `$layer` to a string,
+ * every other key as {@link EntryAt} types it. A `string` index key is
+ * renamed to {@link RootId}; its value is still computed from the original
+ * key, so a root id takes exactly what a keyed-map id takes in a
+ * {@link ConfigEntry}. The `as` clause keeps the skeleton's `?` modifiers.
+ */
+type LayeredShape<S, T, Required extends string> = {
+  [K in keyof S as string extends K
+    ? RootId
+    : K]: K extends '$layer'
+    ? string
+    : EntryAt<T, Required, K>;
+};
+
+/**
  * A {@link ConfigEntry} with its layer label, as a loader or a host hands
  * it to `merge`. `$layer` names the layer (`'defaults'`, `'user'`,
  * `'project'` or any string); two entries of the same layer that set the
  * same key are duplicates, entries of different layers override silently.
  *
+ * `$layer` is a named optional property of the same mapped type as the
+ * entry's keys, so it compiles over any config root, a keyed map included.
+ * When the root is a keyed map, its ids are typed as the strings that start
+ * with a printable ASCII character other than `$`: a root id that is empty,
+ * starts with `$` or starts with a non-ASCII character is refused by the
+ * type, though `merge` accepts it at run time. Reading a root id back with
+ * a key typed only as `string` is a type error for the same reason; narrow
+ * the key first. Ids below the root are typed as in {@link ConfigEntry}.
+ *
+ * @example
+ * ```ts
+ * type Steps = Record<string, { run: string }>;
+ * const entry: LayeredEntry<Steps> = { $layer: 'project', build: { run: 'bun run build' } };
+ * ```
+ *
  * @typeParam T - The config type, derived from the host's schema.
  * @typeParam Required - Dot-joined key paths `false` may not remove.
  */
-export type LayeredEntry<T, Required extends string = never> = ConfigEntry<T, Required> & {
-  /** The layer this entry belongs to. */
-  $layer?: string;
-};
+export type LayeredEntry<T, Required extends string = never> = T extends Leaf | readonly unknown[]
+  ? never
+  : T extends object
+    ? LayeredShape<
+      { $layer?: 0 } & OptionalKeys<T> & { [K in RequiredIds<T, Required>]?: 0 },
+      T,
+      Required
+    >
+    : never;
