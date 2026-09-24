@@ -1,3 +1,8 @@
+- example successfully demonstrates reload behavior with three distinct load scenarios
+  trigger: created and tested TypeScript example
+  kind: pattern
+  artifact: output shows initial { command: build }, cached { command: build }, and after-edit { command: test }
+  signal: loud
 - the plant makes the reload parameter unused, so the build fails and check-node exits 2 at tsc without running the Node script
   trigger: when planting a failure in readModule by passing a literal false for reload
   kind: gotcha
