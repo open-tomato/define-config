@@ -1,3 +1,10 @@
+- CI already runs bun run build before bun run check-node, so dropping the script's own build does not break CI
+  trigger: removing the build step from the check-node script
+  kind: location
+  cause: ci.yml orders build before check-node
+  resolution: no CI change needed
+  artifact: - run: bun run check-node
+  signal: silent
 - artifact: PLAN_TRACKER-rafa-28-bun-run-gates.md: progress.txt | 94 ----
 - planting bugs one at a time (stop-on-failure, the CI comparison) showed that the targeted tests fail
   trigger: when checking that a test run under planted bugs actually fails
