@@ -2,6 +2,10 @@
 
 One section per released version, newest first, headed `## <version> — <date>, <release title>`. All additions to the public surface carry a change note.
 
+## 0.3.0 — 2026-09-24, Graph helpers a runner drives a resolved graph with
+
+- **graph**: `next`, `hooksOf`, `reachable` and `walkOrder` are exported from the package entry, pure functions a runner steps through a resolved `Graph` with: `next` answers the node an outcome leads to (`undefined` for a declared outcome with no handler, a `RangeError` for an unknown node or an undeclared outcome), `hooksOf` the `before` and `after` hooks of a node in declaration order, `reachable` every node a flow reaches from its `start` (`repeat: true` edges and hooks included), and `walkOrder` the depth-first order a flow's nodes are placed in, which never follows a `repeat: true` edge; README's new `### Driving a graph` section drives a flow with them.
+
 ## 0.2.1 — 2026-09-24, resolveGraph returns its `when:` placements as `graph.hooks`
 
 - **resolveGraph**: returns every resolved `when:` placement as `graph.hooks`, a `GraphHook[]` in declaration order (and so does `load`); a hook is not an edge, and a host that deep-equals a whole `Graph` sees a new `hooks` key.
