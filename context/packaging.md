@@ -11,3 +11,11 @@ plant the file, run `bun run check-pack` (it exits 1 and names the path), then r
 `package.json`.
 
 This page replaces no earlier statement; the `check-pack` note in `AGENTS.md` points here.
+
+## `check-pack: ok` is the gate's own line, not a `bun run gates` line
+
+On success `scripts/pack-check.ts` prints `check-pack: ok`, and `bun run gates` passes each
+gate's stdout through, so a filter on lines starting with a gate name finds seven lines, not
+six. Match the runner's own lines on `: exit ` or `skipped` instead.
+
+This section replaces no earlier statement.
