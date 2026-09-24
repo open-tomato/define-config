@@ -1,3 +1,10 @@
+- lint fails the static import even with dist/ present, because the gate lint pass runs after gates removes dist/
+  trigger: when the static dist import is added to scripts/reload-node.mjs with dist/ built
+  kind: pattern
+  cause: gates.ts removes dist/ before lint, so import/no-unresolved cannot resolve ../dist/index.js
+  resolution: keep the run-time import() in reload-node.mjs
+  artifact: Unable to resolve path to module '../dist/index.js'
+  signal: loud
 - bun run puts a node shim that is bun on PATH, so Bun.which('node') always finds one; the probe must run the candidate and check process.versions.bun
   trigger: when running bun run gates with no real node on PATH
   kind: gotcha
