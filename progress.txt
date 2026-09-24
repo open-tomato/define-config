@@ -1,0 +1,22 @@
+- artifact: PLAN_TRACKER-rafa-28-bun-run-gates.md: progress.txt | 94 ----
+- planting bugs one at a time (stop-on-failure, the CI comparison) showed that the targeted tests fail
+  trigger: when checking that a test run under planted bugs actually fails
+  kind: pattern
+  cause: a passing suite alone cannot show that the assertions can fail
+  resolution: plant with Edit, run the single test file, restore with Edit, then rerun
+  artifact: (fail) runGates > fails at check-node when node is missing under CI=true
+  signal: loud
+- import/order wants node: builtins first, a blank line, then bun:test
+  trigger: when writing a test file that imports both bun:test and node: builtins
+  kind: gotcha
+  cause: the ESLint config treats bun:test as external and node: modules as builtin
+  resolution: put the node: imports in their own group before the bun:test import
+  artifact: `bun:test` import should occur after import of `node:path`
+  signal: loud
+- check-pack prints its own 'check-pack: ok' line, so a filter on the gate name matches seven lines, not six
+  trigger: when grepping bun run gates output for lines starting with a gate name
+  kind: gotcha
+  cause: scripts/pack-check.ts prints 'check-pack: ok' on success, and the runner inherits the gate's stdout
+  resolution: match runner lines on ': exit ' or 'skipped' rather than on the name prefix
+  artifact: check-pack: ok
+  signal: silent
