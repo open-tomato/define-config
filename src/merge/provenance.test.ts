@@ -1,8 +1,11 @@
+import type { LayeredEntry } from '../types';
 import type { ProvenanceRecord } from './apply';
 
 import { describe, expect, test } from 'bun:test';
 
 import { provenanceOf } from '../provenance';
+
+import { apply, initialState } from './apply';
 
 import { merge } from './index';
 
@@ -86,5 +89,50 @@ describe('a keyed $replace', () => {
 
     expect(provenanceOf(result, 'a.y')).toEqual([{ entry: 0, layer: 'defaults', kind: 'set' }]);
     expect(provenanceOf(result, ['a']).at(-1)).toEqual({ entry: 1, layer: 'project', kind: 'replace' });
+  });
+});
+
+describe('a typed LayeredEntry with a root $replace', () => {
+  interface Config {
+    a: { x: number; y: number };
+    b: number;
+  }
+
+  const entries: LayeredEntry<Config>[] = [
+    { $layer: 'defaults', a: { x: 1, y: 2 }, b: 3 },
+    { $layer: 'user', a: { x: 4 } },
+    { $layer: 'project', $replace: true, a: { x: 9 } },
+  ];
+
+  test('merges to the value apply gives the same untyped entries', () => {
+    // Arrange
+    const untyped: unknown[] = entries;
+    const applied = untyped.reduce<ReturnType<typeof initialState>>(
+      (state, entry, index) => apply(state, entry, index),
+      initialState(),
+    );
+
+    // Act
+    const result = merge(entries);
+
+    // Assert
+    expect(result.value).toEqual(applied.value);
+    expect(result.value).toEqual({ a: { x: 9 } });
+  });
+
+  test('ends the root records with the replace record of the last entry', () => {
+    const result = merge(entries);
+
+    expect(provenanceOf(result, '').at(-1)).toEqual({ entry: 2, layer: 'project', kind: 'replace' });
+  });
+
+  test('keeps records only from entries before it on every path the replace dropped', () => {
+    const result = merge(entries);
+
+    expect(provenanceOf(result, 'b')).toEqual([{ entry: 0, layer: 'defaults', kind: 'set' }]);
+    expect(provenanceOf(result, 'a.y')).toEqual([{ entry: 0, layer: 'defaults', kind: 'set' }]);
+    for (const path of ['b', 'a.y']) {
+      expect(provenanceOf(result, path).every(({ entry }) => entry < 2)).toBe(true);
+    }
   });
 });

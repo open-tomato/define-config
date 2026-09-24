@@ -1,3 +1,17 @@
+- `bun $g` with g='run lint' ran as one argument and reported a missing script
+  trigger: when looping over multi-word gate commands in a zsh for-loop
+  kind: gotcha
+  cause: zsh does not word-split unquoted parameter expansions
+  resolution: run each gate as its own command
+  artifact: error: Script not found "run lint"
+  signal: loud
+- the expect-error cases for `$replace: false` and `$replace: 1` passed before the change because `$replace` was an unknown key, not because of its value
+  trigger: when adding @ts-expect-error cases for a key the type does not declare yet
+  kind: gotcha
+  cause: an excess-property error meets @ts-expect-error just as a wrong-value error does
+  resolution: after implementing, widen the mapped value temporarily and confirm each directive becomes TS2578 unused
+  artifact: TS2578: Unused '@ts-expect-error' directive.
+  signal: silent
 - indexed access yields number | undefined, which fails toBe(number) type checks
   trigger: when writing tests that index result.sources under noUncheckedIndexedAccess
   kind: gotcha
