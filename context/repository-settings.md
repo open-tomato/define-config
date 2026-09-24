@@ -3,7 +3,7 @@
 This page documents the `gh api` and npm commands to configure the GitHub repository and npm
 package for the `@open-tomato/define-config` release workflow. Each setting includes the apply
 command (informational; not to be run in agent sessions) and the read command to verify the
-configuration.
+configuration. The last section covers checking the YAML files under `.github/`.
 
 ## GitHub Repository Settings
 
@@ -271,3 +271,22 @@ This order ensures that:
 - The workflow can safely dry-run before the `v*` ruleset blocks all tag updates
 - The trusted publisher is in place before the first non-dry-run release
 - All guards and validations are active before automation can publish
+
+## Checking the `.github` YAML
+
+`bun run lint` does not read YAML, so it passes whatever `.github/dependabot.yml` and
+`.github/workflows/*.yml` hold. Check them by hand after editing, without adding a dev dependency:
+
+```bash
+uvx check-jsonschema --schemafile https://json.schemastore.org/dependabot-2.0.json .github/dependabot.yml
+uvx --from actionlint-py actionlint .github/workflows/*.yml
+```
+
+The schemastore schema accepts options that Dependabot's `bun` ecosystem does not support:
+`allow` with `dependency-type: indirect`, `commit-message.prefix-development`,
+`groups.*.dependency-type`, `insecure-external-code-execution`, `vendor` and
+`versioning-strategy`. A passing schema check does not clear the `bun` entry; read it with
+`Bun.YAML.parse` in `bun -e` and reject each of those keys.
+
+actionlint runs shellcheck over `run:` steps and fails on an unquoted expansion (SC2086), so
+an optional flag goes into a bash array, as in `publish.yml`'s publish step.
