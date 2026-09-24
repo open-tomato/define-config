@@ -1,3 +1,17 @@
+- actionlint exits 1 on an unquoted expansion, even though shellcheck rates it only info
+  trigger: when passing an optional flag through an env var into a run step
+  kind: gotcha
+  cause: actionlint runs shellcheck on run: scripts and reports SC2086 as an error
+  resolution: build the npm arguments in a bash array and append --dry-run conditionally
+  artifact: SC2086:info:1:42: Double quote to prevent globbing and word splitting
+  signal: loud
+- npm latest (12.1.0) requires node ^22.22.2 || ^24.15.0 || >=26.0.0, so a floating Node 22 could reject it
+  trigger: when choosing the npm version for the publish job on Node 22
+  kind: gotcha
+  cause: npm 12 raised its engines floor within the Node 22 line
+  resolution: pinned npm@11.20.0, the newest 11.x, whose engines are ^20.17.0 || >=22.9.0
+  artifact: ^22.22.2 || ^24.15.0 || >=26.0.0
+  signal: silent
 - exit 128 (unknown tag, missing origin/main) would read as not-an-ancestor if the check only compares against 0
   trigger: when testing ancestry through git merge-base --is-ancestor
   kind: gotcha
