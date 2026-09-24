@@ -1,3 +1,10 @@
+- an untyped const array of records widens kind to string, so check-types fails while bun test passes
+  trigger: when writing an expected-records array in a test with kind literals
+  kind: gotcha
+  cause: bun test strips types without checking them, and the literal widens without an annotation
+  resolution: annotate the array as ProvenanceRecord[] (import type from ./apply)
+  artifact: Type 'string' is not assignable to type 'ProvenanceKind'.
+  signal: loud
 - src/index.test.ts pins the function count in a test title as well as in FUNCTIONS
   trigger: when adding a public function to src/index.ts
   kind: location

@@ -26,8 +26,8 @@ test('loads a project rafa.config.ts over a user .rafa/config.yaml', async () =>
   // Assert
   expect(result.diagnostics).toEqual([]);
   expect(result.sources).toEqual([
-    { layer: 'user', path: join(FIXTURES, 'user', '.rafa', 'config.yaml') },
-    { layer: 'project', path: join(FIXTURES, 'project', 'rafa.config.ts') },
+    { layer: 'user', path: join(FIXTURES, 'user', '.rafa', 'config.yaml'), entries: [0, 1] },
+    { layer: 'project', path: join(FIXTURES, 'project', 'rafa.config.ts'), entries: [1, 2] },
   ]);
   expect(result.config).toEqual({
     build: { command: 'bun run build', retries: 2, timeout: 30 },

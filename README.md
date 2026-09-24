@@ -257,11 +257,39 @@ console.log(diagnostics);
 // every problem, in stage order
 
 console.log(sources);
-// [{ layer, path }] for each layer that had a file, with an absolute path
+// [{ layer, path, entries }] for each layer that had a file, with an absolute path
 ```
 
 A relative `dir` resolves against the directory passed to `load`. A file that cannot be read
 yields a `load-failed` error and its layer contributes nothing; `load` still returns the rest.
+
+`load` also returns `provenance`, the map `merge` records over the entries read (every layer's
+entries concatenated in layer order), and each source carries `entries: [from, to]`, the half-open
+range of entry indexes its file contributed. The ranges follow layer order and meet end to start,
+so every record's `entry` falls in exactly one source's range; a file that failed to read keeps
+its place in `sources` with an empty range (`from === to`). To find the file behind a record, look
+up the source whose range holds its `entry`:
+
+```ts
+import { createLoader, provenanceOf } from '@open-tomato/define-config';
+
+const loader = createLoader({
+  lookup: ['rafa.config.ts', '.rafa/config.yaml'],
+  layers: [
+    { layer: 'user', dir: '/home/me' },
+    { layer: 'project', dir: '.' },
+  ],
+  loaders: { '.yaml': (text) => Bun.YAML.parse(text) },
+});
+
+const result = await loader.load(process.cwd());
+const last = provenanceOf(result, 'build.retries').at(-1);
+const file = result.sources.find(({ entries: [from, to] }) => last !== undefined && last.entry >= from && last.entry < to);
+
+console.log(last, file?.path);
+// run in /work/project, with one user entry and a project file that sets build.retries:
+// { entry: 1, layer: 'project', kind: 'set' } '/work/project/rafa.config.ts'
+```
 
 ## Diagnostic Codes
 

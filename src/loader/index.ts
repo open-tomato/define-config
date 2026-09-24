@@ -9,7 +9,9 @@
  *    `$layer`; a source it cannot read yields one `load-failed` error and
  *    its layer is skipped;
  * 3. `merge` applies every entry read, layer order then file order, with
- *    the host's `required` and `duplicates`;
+ *    the host's `required` and `duplicates`; each source is returned with
+ *    the range of those entries it contributed, and the merge's provenance
+ *    is returned beside it;
  * 4. `validate` runs the host's `schema` over the merged value, when one
  *    is given;
  * 5. `resolveGraph` resolves the merged `flows` section against the host's
@@ -27,11 +29,12 @@
 
 import type { Diagnostic } from '../diagnostics';
 import type { Graph, StepRegistry } from '../graph/types';
+import type { Provenance } from '../merge/apply';
 import type { DuplicatesOption } from '../merge/duplicates';
 import type { StandardSchemaV1 } from '../standard-schema';
 import type { SchemaSection } from '../validate';
-import type { LayerDir, Source } from './lookup';
-import type { Loaders, TaggedEntry } from './read';
+import type { FoundSource, LayerDir } from './lookup';
+import type { Loaders, ReadResult, TaggedEntry } from './read';
 
 import { resolveGraph } from '../graph';
 import { merge } from '../merge';
@@ -40,8 +43,21 @@ import { validate, validateSections } from '../validate';
 import { findSources } from './lookup';
 import { readSource } from './read';
 
-export type { LayerDir, Source } from './lookup';
+export type { LayerDir } from './lookup';
 export type { Loader, Loaders } from './read';
+
+/** The file found for one layer, and the entries it contributed. */
+export interface Source extends FoundSource {
+  /**
+   * The half-open range `[from, to)` of entry indexes this file
+   * contributed: the indexes that the `entry` of a merge diagnostic and of
+   * a provenance record use, all layers' entries concatenated in layer
+   * order. Ranges follow source order and meet end to start, so they tile
+   * the entries read. `from === to` when the file contributed no entry:
+   * it failed to read, or it yielded an empty array.
+   */
+  readonly entries: readonly [from: number, to: number];
+}
 
 /** Options accepted by {@link createLoader} and {@link load}. */
 export interface LoaderOptions {
@@ -102,10 +118,19 @@ export interface LoadResult {
   readonly diagnostics: readonly Diagnostic[];
   /**
    * The file found for each layer that has one, in layer order, with an
-   * absolute `path`. A source that failed to read is listed here too; its
+   * absolute `path` and the `entries` range it contributed. A source that
+   * failed to read is listed here too, with an empty range; its
    * `load-failed` diagnostic says why it contributed nothing.
    */
   readonly sources: readonly Source[];
+  /**
+   * Which entries touched which key path, as `merge` recorded it: each
+   * dot-joined path (`''` for the root) mapped to its records in entry
+   * order. A record's `entry` falls in the `entries` range of exactly one
+   * source, which names the file it came from. Read one path with
+   * `provenanceOf`. The map, its arrays and its records are frozen.
+   */
+  readonly provenance: Provenance;
 }
 
 /** What {@link createLoader} returns. */
@@ -116,7 +141,7 @@ export interface ConfigLoader {
    *
    * @param cwd - Directory a relative layer `dir` resolves against.
    * @returns The merged config, the graph when `steps` was given, every
-   *   diagnostic and the sources found.
+   *   diagnostic, the sources found and the provenance.
    */
   readonly load: (cwd: string) => Promise<LoadResult>;
 }
@@ -175,17 +200,33 @@ function flowsOf(config: Readonly<Record<string, unknown>>): Readonly<Record<str
     : {};
 }
 
-/** Read every source, keeping source order; failures become diagnostics. */
+/** The entries a read yielded; none when it failed. */
+function entriesOf(result: ReadResult): readonly TaggedEntry[] {
+  return result.ok
+    ? result.entries
+    : [];
+}
+
+/**
+ * Read every source, keeping source order; failures become diagnostics.
+ * Each source's `entries` range is counted from its own read, in the order
+ * the entries are concatenated, so a failed read holds an empty range.
+ */
 async function readAll(
-  sources: readonly Source[],
+  found: readonly FoundSource[],
   loaders: Loaders | undefined,
-): Promise<{ entries: readonly TaggedEntry[]; diagnostics: readonly Diagnostic[] }> {
-  const results = await Promise.all(sources.map((source) => readSource(source, loaders)));
+): Promise<{ sources: readonly Source[]; entries: readonly TaggedEntry[]; diagnostics: readonly Diagnostic[] }> {
+  const reads = await Promise.all(found.map(async (source) => ({ source, result: await readSource(source, loaders) })));
+  let next = 0;
+  const sources = reads.map(({ source, result }): Source => {
+    const from = next;
+    next += entriesOf(result).length;
+    return { layer: source.layer, path: source.path, entries: [from, next] };
+  });
   return {
-    entries: results.flatMap((result) => (result.ok
-      ? result.entries
-      : [])),
-    diagnostics: results.flatMap((result) => (result.ok
+    sources,
+    entries: reads.flatMap(({ result }) => entriesOf(result)),
+    diagnostics: reads.flatMap(({ result }) => (result.ok
       ? []
       : [result.diagnostic])),
   };
@@ -204,14 +245,15 @@ async function readAll(
  *   loaders: { '.yaml': (text) => Bun.YAML.parse(text) },
  * });
  * // { config: { … }, diagnostics: [],
- * //   sources: [{ layer: 'user', path: '/home/me/.rafa/config.yaml' },
- * //             { layer: 'project', path: '/work/project/rafa.config.ts' }] }
+ * //   sources: [{ layer: 'user', path: '/home/me/.rafa/config.yaml', entries: [0, 1] },
+ * //             { layer: 'project', path: '/work/project/rafa.config.ts', entries: [1, 2] }],
+ * //   provenance: Map(…) {…} }
  * ```
  *
  * @param cwd - Directory a relative layer `dir` resolves against.
  * @param options - See {@link LoaderOptions}.
- * @returns `{ config, graph, diagnostics, sources }`; `graph` only when
- *   `options.steps` is given.
+ * @returns `{ config, graph, diagnostics, sources, provenance }`; `graph`
+ *   only when `options.steps` is given.
  * @throws {TypeError} When `options` is not an object, `schema` is not an
  *   object, or `steps` is not an object; when `lookup` or `layers` is
  *   malformed (see `findSources`); when `loaders` is not an object or its
@@ -223,8 +265,8 @@ async function readAll(
  */
 export async function load(cwd: string, options: LoaderOptions): Promise<LoadResult> {
   checkOptions(options);
-  const sources = await findSources(cwd, options.lookup, options.layers);
-  const read = await readAll(sources, options.loaders);
+  const found = await findSources(cwd, options.lookup, options.layers);
+  const read = await readAll(found, options.loaders);
   const merged = merge(read.entries, {
     ...(options.duplicates === undefined
       ? {}
@@ -236,7 +278,8 @@ export async function load(cwd: string, options: LoaderOptions): Promise<LoadRes
   const checked = schemaDiagnostics(merged.value, options.schema);
   const base = {
     config: merged.value,
-    sources,
+    sources: read.sources,
+    provenance: merged.provenance,
   };
   if (options.steps === undefined) {
     return { ...base, diagnostics: [...read.diagnostics, ...merged.diagnostics, ...checked] };
@@ -263,7 +306,7 @@ export async function load(cwd: string, options: LoaderOptions): Promise<LoadRes
  *   steps,
  *   loaders: { '.yaml': (text) => Bun.YAML.parse(text) },
  * });
- * const { config, graph, diagnostics, sources } = await loader.load(process.cwd());
+ * const { config, graph, diagnostics, sources, provenance } = await loader.load(process.cwd());
  * ```
  *
  * @param options - See {@link LoaderOptions}.

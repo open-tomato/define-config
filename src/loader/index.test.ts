@@ -1,5 +1,6 @@
-import type { LoaderOptions } from '.';
+import type { LoaderOptions, LoadResult } from '.';
 import type { StepRegistry } from '../graph/types';
+import type { ProvenanceRecord } from '../merge/apply';
 import type { StandardSchemaV1 } from '../standard-schema';
 
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -56,6 +57,11 @@ function at(...segments: string[]): string {
   return join(root, ...segments);
 }
 
+/** The path of the source whose `entries` range holds `entry`. */
+function fileOf(sources: LoadResult['sources'], entry: number): string | undefined {
+  return sources.find(({ entries: [from, to] }) => entry >= from && entry < to)?.path;
+}
+
 beforeAll(async () => {
   root = await mkdtemp(join(tmpdir(), 'define-config-loader-'));
   await mkdir(at('empty'));
@@ -78,7 +84,7 @@ describe('no layer found', () => {
     const result = await loader.load(root);
 
     // Assert
-    expect(result).toEqual({ config: {}, diagnostics: [], sources: [] });
+    expect(result).toEqual({ config: {}, diagnostics: [], sources: [], provenance: new Map() });
   });
 
   test('with steps, an empty graph is still returned', async () => {
@@ -91,7 +97,7 @@ describe('no layer found', () => {
   test('an empty layer list is no source either', async () => {
     const result = await load(root, { lookup: LOOKUP, layers: [] });
 
-    expect(result).toEqual({ config: {}, diagnostics: [], sources: [] });
+    expect(result).toEqual({ config: {}, diagnostics: [], sources: [], provenance: new Map() });
   });
 });
 
@@ -109,8 +115,8 @@ describe('layers', () => {
 
     // Assert
     expect(result.sources).toEqual([
-      { layer: 'user', path: at('user', '.rafa', 'config.yaml') },
-      { layer: 'project', path: at('project', 'config.json') },
+      { layer: 'user', path: at('user', '.rafa', 'config.yaml'), entries: [0, 1] },
+      { layer: 'project', path: at('project', 'config.json'), entries: [1, 2] },
     ]);
     expect(result.config).toEqual({ a: { x: 1, y: 2 }, b: true });
     expect(result.diagnostics).toEqual([]);
@@ -120,6 +126,66 @@ describe('layers', () => {
     const result = await load(root, { lookup: LOOKUP, layers: [{ layer: 'project', dir: 'project' }] });
 
     expect(Object.keys(result.config)).toEqual(['a', 'b']);
+  });
+});
+
+describe('entries ranges and provenance', () => {
+  test('two readable sources hold consecutive ranges, and each record maps to its file', async () => {
+    // Arrange: the user file yields one entry, the dupes file two.
+    const options: LoaderOptions = {
+      lookup: LOOKUP,
+      layers: [{ layer: 'user', dir: 'user' }, { layer: 'project', dir: 'dupes' }],
+      loaders: YAML,
+    };
+
+    // Act
+    const result = await load(root, options);
+
+    // Assert
+    const userPath = at('user', '.rafa', 'config.yaml');
+    const dupesPath = at('dupes', 'config.json');
+    expect(result.sources).toEqual([
+      { layer: 'user', path: userPath, entries: [0, 1] },
+      { layer: 'project', path: dupesPath, entries: [1, 3] },
+    ]);
+    const expected: readonly ProvenanceRecord[] = [
+      { entry: 0, layer: 'user', kind: 'set' },
+      { entry: 1, layer: 'project', kind: 'set' },
+      { entry: 2, layer: 'project', kind: 'set' },
+    ];
+    const records = result.provenance.get('a.x') ?? [];
+    expect(records).toEqual(expected);
+    expect(records.map(({ entry }) => fileOf(result.sources, entry))).toEqual([userPath, dupesPath, dupesPath]);
+  });
+
+  test('a failed read keeps its source with an empty range at its place, and later ranges do not shift', async () => {
+    // Arrange: broken/config.json is invalid JSON, between two readable files.
+    const options: LoaderOptions = {
+      lookup: LOOKUP,
+      layers: [{ layer: 'user', dir: 'user' }, { layer: 'broken', dir: 'broken' }, { layer: 'project', dir: 'project' }],
+      loaders: YAML,
+    };
+
+    // Act
+    const result = await load(root, options);
+
+    // Assert
+    expect(result.sources).toEqual([
+      { layer: 'user', path: at('user', '.rafa', 'config.yaml'), entries: [0, 1] },
+      { layer: 'broken', path: at('broken', 'config.json'), entries: [1, 1] },
+      { layer: 'project', path: at('project', 'config.json'), entries: [1, 2] },
+    ]);
+    expect(result.diagnostics.map(({ code }) => code)).toEqual(['load-failed']);
+    const expected: readonly ProvenanceRecord[] = [{ entry: 1, layer: 'project', kind: 'set' }];
+    expect(result.provenance.get('b')).toEqual(expected);
+    expect(fileOf(result.sources, 1)).toBe(at('project', 'config.json'));
+  });
+
+  test('the provenance returned is the merge\'s frozen map', async () => {
+    const result = await load(root, { lookup: LOOKUP, layers: [{ layer: 'project', dir: 'project' }] });
+
+    expect(Object.isFrozen(result.provenance)).toBe(true);
+    expect([...result.provenance.keys()]).toEqual(['a', 'a.y', 'b']);
   });
 });
 
@@ -262,7 +328,7 @@ describe('createLoader binds its options', () => {
     const result = await loader.load(root);
 
     // Assert
-    expect(result.sources).toEqual([{ layer: 'project', path: at('project', 'config.json') }]);
+    expect(result.sources).toEqual([{ layer: 'project', path: at('project', 'config.json'), entries: [0, 1] }]);
   });
 
   test('malformed options are refused at creation', () => {
