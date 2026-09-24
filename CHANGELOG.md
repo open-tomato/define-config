@@ -2,6 +2,11 @@
 
 One section per released version, newest first, headed `## <version> — <date>, <release title>`. All additions to the public surface carry a change note.
 
+## 0.5.0 — 2026-09-24, reload a changed config file within one process
+
+- **createLoader**: `LoaderOptions.reload` (default `false`) makes `load` read a `.ts`, `.mts`, `.mjs` or `.js` config file's bytes and import it again only when they changed, so a host that keeps one process across edits sees the edit on its next `load` and an unchanged file keeps its cached module; modules the config file imports stay cached, each distinct content stays in the runtime's module registry for the process's life, a file that cannot be read is `load-failed`, and a non-boolean `reload` is a `TypeError`.
+- Documentation: README's `## Module Cache` section is rewritten around `reload`, naming its two limits and showing a `load` before and after an edit, and the `## createLoader` options paragraph links to it.
+
 ## 0.4.0 — 2026-09-24, canonicalize and digest — a byte-stable text of a config or graph, and its hash
 
 - **digest**: `canonicalize`, `digest` and `CanonicalizeError` are exported from the package entry: `canonicalize` writes any value as byte-stable JSON text (keys sorted by UTF-16 code unit, `-0` as `0`, `Date`, `Map`, `Set` and functions as `$date`, `$map`, `$set` and `$function` tags, a function by name and never by body, a shared reference written twice), `digest` returns `sha256:` and the hex SHA-256 of that text, synchronously from `node:crypto`, and both throw a `CanonicalizeError` with `code: 'cyclic-value' | 'not-canonical'` and the `path` to the offending value; README's new `## canonicalize and digest` section digests `result.value`, `result.config` or `result.graph`, never a whole result.

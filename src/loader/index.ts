@@ -17,9 +17,15 @@
  * 5. `resolveGraph` resolves the merged `flows` section against the host's
  *    `steps`, when a registry is given.
  *
- * Nothing is cached: every `load` looks up and reads the files again. The
- * runtime's module cache still applies to `import()`, so a module source
- * already imported in this process yields the module it loaded first.
+ * Nothing is cached here: every `load` looks up and reads the files again.
+ * A `.json` file or one read by a host loader is read fresh each time. A
+ * module file (`.ts`, `.mts`, `.mjs`, `.js`) goes through `import()`, and
+ * with the `reload` option off (the default) the runtime's module cache
+ * applies, so a module source already imported in this process yields the
+ * module it loaded first, even after an edit. With `reload: true` the
+ * config file is evaluated again when its bytes change; a module it
+ * imports stays cached, and one module is retained per distinct content
+ * for the life of the process (see {@link LoaderOptions.reload}).
  *
  * A config file read through `import()` is code, and it runs when it is
  * loaded; which files to trust is the host's decision.
@@ -94,6 +100,20 @@ export interface LoaderOptions {
    * (the default), `error` or `allow`.
    */
   readonly duplicates?: DuplicatesOption;
+  /**
+   * Whether a module config file (`.ts`, `.mts`, `.mjs`, `.js`) is
+   * evaluated again when its bytes change. Defaults to `false`: the
+   * runtime's module cache applies, and a file already imported in this
+   * process yields the module it loaded first. With `true`, each `load`
+   * reads the file's bytes and imports it by their content, so an edit is
+   * seen and an unchanged file is not evaluated again. Two limits, by
+   * design: only the config file itself is evaluated again, and the
+   * modules it imports stay cached; and every distinct content stays in the
+   * runtime's module registry for the life of the process, one module
+   * retained per edit. A `.json` file or one read by `loaders` is read
+   * fresh either way. A CLI that loads once needs nothing.
+   */
+  readonly reload?: boolean;
 }
 
 /** What {@link load} returns. */
@@ -161,12 +181,12 @@ function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-/** Refuse options that are not an object, or a `schema`/`steps` of the wrong kind. */
+/** Refuse options that are not an object, or a `schema`/`steps`/`reload` of the wrong kind. */
 function checkOptions(options: unknown): asserts options is LoaderOptions {
   if (!isRecord(options)) {
     throw new TypeError(`createLoader: expected options to be an object, got ${kindOf(options)}`);
   }
-  const { schema, steps } = options;
+  const { schema, steps, reload } = options;
   if (schema !== undefined && typeof schema !== 'object') {
     throw new TypeError(`createLoader: expected schema to be a Standard Schema or sections, got ${kindOf(schema)}`);
   }
@@ -175,6 +195,9 @@ function checkOptions(options: unknown): asserts options is LoaderOptions {
   }
   if (steps !== undefined && !isRecord(steps)) {
     throw new TypeError(`createLoader: expected steps to be an object, got ${kindOf(steps)}`);
+  }
+  if (reload !== undefined && typeof reload !== 'boolean') {
+    throw new TypeError(`createLoader: expected reload to be a boolean, got ${kindOf(reload)}`);
   }
 }
 
@@ -215,8 +238,9 @@ function entriesOf(result: ReadResult): readonly TaggedEntry[] {
 async function readAll(
   found: readonly FoundSource[],
   loaders: Loaders | undefined,
+  reload: boolean,
 ): Promise<{ sources: readonly Source[]; entries: readonly TaggedEntry[]; diagnostics: readonly Diagnostic[] }> {
-  const reads = await Promise.all(found.map(async (source) => ({ source, result: await readSource(source, loaders) })));
+  const reads = await Promise.all(found.map(async (source) => ({ source, result: await readSource(source, loaders, { reload }) })));
   let next = 0;
   const sources = reads.map(({ source, result }): Source => {
     const from = next;
@@ -255,7 +279,8 @@ async function readAll(
  * @returns `{ config, graph, diagnostics, sources, provenance }`; `graph`
  *   only when `options.steps` is given.
  * @throws {TypeError} When `options` is not an object, `schema` is not an
- *   object, or `steps` is not an object; when `lookup` or `layers` is
+ *   object, `steps` is not an object, or `reload` is given and is not a
+ *   boolean; when `lookup` or `layers` is
  *   malformed (see `findSources`); when `loaders` is not an object or its
  *   entry for a found file's extension is not a function (see
  *   `readSource`); when `required` or `duplicates` is malformed (see
@@ -266,7 +291,7 @@ async function readAll(
 export async function load(cwd: string, options: LoaderOptions): Promise<LoadResult> {
   checkOptions(options);
   const found = await findSources(cwd, options.lookup, options.layers);
-  const read = await readAll(found, options.loaders);
+  const read = await readAll(found, options.loaders, options.reload === true);
   const merged = merge(read.entries, {
     ...(options.duplicates === undefined
       ? {}
@@ -312,7 +337,8 @@ export async function load(cwd: string, options: LoaderOptions): Promise<LoadRes
  * @param options - See {@link LoaderOptions}.
  * @returns `{ load }`.
  * @throws {TypeError} When `options` is not an object, `schema` is not an
- *   object, or `steps` is not an object. Every other malformed option is
+ *   object, `steps` is not an object, or `reload` is given and is not a
+ *   boolean. Every other malformed option is
  *   refused by `load`.
  */
 export function createLoader(options: LoaderOptions): ConfigLoader {

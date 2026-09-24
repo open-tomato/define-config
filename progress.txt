@@ -1,82 +1,94 @@
-- including the fence line makes bun fail on the extracted file
-  trigger: when extracting the README example block with awk or sed for a bun run
+- zsh does not word-split unquoted variables, so each gate command failed as a single word
+  trigger: when looping over gate commands stored in a zsh string variable
   kind: gotcha
-  cause: the line range or awk pattern kept the opening three-backtick ts fence
-  resolution: take only the lines between the fences (README lines 391-411) and rewrite the package import to dist/index.js
-  artifact: error: Unterminated string literal
+  cause: for c in "bun run lint" ...; $c treats the whole string as one command name in zsh
+  resolution: run each gate as its own literal command
+  artifact: (eval):1: command not found: bun run lint
   signal: loud
-- README maintains 123-character wrap width
-  trigger: wrap width measurement
+- example successfully demonstrates reload behavior with three distinct load scenarios
+  trigger: created and tested TypeScript example
   kind: pattern
-  cause: Hand-wrapped prose with careful line breaks
-  resolution: All new prose fits within established width constraint
-  artifact: max width: 123
+  artifact: output shows initial { command: build }, cached { command: build }, and after-edit { command: test }
   signal: loud
-- SHA-256 digests are deterministic and change predictably when values change
-  trigger: example output verification
+- the plant makes the reload parameter unused, so the build fails and check-node exits 2 at tsc without running the Node script
+  trigger: when planting a failure in readModule by passing a literal false for reload
+  kind: gotcha
+  cause: noUnusedParameters rejects the unused parameter (TS6133)
+  resolution: plant a form that still reads the parameter, such as reload && false
+  artifact: error TS6133: 'reload' is declared but its value is never read.
+  signal: loud
+- lint passed on the new script using process.stdout.write/process.stderr.write; console.log was avoided per the no-console-in-production rule
+  trigger: when writing a scripts/*.mjs that prints output
+  kind: gotcha
+  cause: scripts/**/*.mjs gets the shared rule set with Node globals
+  resolution: use process.stdout.write in scripts
+  artifact: scripts/reload-node.mjs
+  signal: silent
+- the reload-off control in a second directory reads 8000 on its second load under node 22, which shows the ESM cache hides the edit and the reload reading is not a false positive
+  trigger: when checking that reload works under node against the built dist
   kind: pattern
-  cause: Both port 9000 and port 9001 produce consistent, different hashes
-  resolution: Example output is accurate and matches the comments
-  artifact: sha256:d3dc407e4672bb0247355c4c613df22e90e38b21dcff374587a33900944df9f7
-  signal: loud
-- BSD sed -i rejects the edit and leaves the file unchanged
-  trigger: when running sed -i with a pattern containing quotes on macOS
+  cause: node caches an ESM module by its file URL, so a second import with no query returns the first module
+  resolution: keep the control leg in check-node
+  artifact: control (reload: false): first load 8000, second load 8000
+  signal: silent
+- load is not exported from src/index.ts, only createLoader
+  trigger: when writing tests that must import only from ../index
   kind: gotcha
-  cause: BSD sed needs a backup-suffix argument and different quoting
-  resolution: use perl -pi -e or the Edit tool
-  artifact: unterminated substitute pattern
-  signal: loud
-- Diagnostic uses the field level, not severity
-  trigger: when filtering LoadResult diagnostics by error severity in a test
-  kind: gotcha
-  cause: the interface declares level: DiagnosticLevel
-  resolution: filter with d.level === 'error'
-  artifact: Property 'severity' does not exist on type 'Diagnostic'
-  signal: loud
-- The dist/index.d.ts declaration test only matched interface, type, function and namespace, so it reported an exported class as undeclared
-  trigger: when exporting a class from src/index.ts
-  kind: gotcha
-  cause: The pattern in src/index.test.ts had no `class` alternative
-  resolution: Added `class` to the pattern. A control run with it removed exits 1
-  artifact: every re-exported name is declared, not merely named, by the file it comes from
-  signal: loud
-- the default import fc triggers import/no-named-as-default-member warnings
-  trigger: when importing fast-check in this repo
-  kind: pattern
-  cause: eslint import plugin flags fc.assert and similar member access
-  resolution: use named imports: import { assert, jsonValue, property } from 'fast-check'
-  artifact: import/no-named-as-default-member
-  signal: loud
-- jsonValue can produce an object whose only key is $date, $map, $set or $function, which canonicalize refuses as not-canonical
-  trigger: when generating values with fc.jsonValue() for canonicalize properties
-  kind: gotcha
-  cause: the tag-imitation refusal applies to any plain object with a lone tag key
-  resolution: filter generated values with a recursive check for lone tag-key objects
-  artifact: not-canonical
-  signal: loud
-- tsc -p tsconfig.build.json emits dist/digest/canonicalize.d.ts even though index.ts does not export it yet
-  trigger: when running bun run build after adding an unexported src module
+  cause: public API exposes createLoader(...).load
+  resolution: use createLoader(options).load(cwd) in the test
+  artifact: export { createLoader } from './loader'
+  signal: silent
+- progress.txt was already modified before this task and will be committed with it by git add -A
+  trigger: when reading git status at session start
   kind: location
-  cause: the build tsconfig covers all non-test src files, not only the index graph
-  resolution: expected; same as every other src module
+  cause: left by an earlier loop step
+  resolution: left untouched
+  artifact: M progress.txt
   signal: silent
-- the plan names undefined only in arrays and at the root; dropping it in a Map or Set would make new Map([['a', undefined]]) print the same as an empty Map
-  trigger: when deciding how canonicalize handles undefined inside a Map or Set
-  kind: gotcha
-  cause: the spec does not cover Map or Set members
-  resolution: refuse undefined anywhere it would be written; only object properties are dropped
+- README.md section Module Cache (lines 442-447) describes caching without mentioning reload; still true for the default so left for the Documentation stage
+  trigger: when checking tracked docs for sentences the reload option affects
+  kind: location
+  cause: the README update is scheduled as its own stage
+  resolution: left unchanged and reported
+  artifact: ## Module Cache
   signal: silent
-- the literal rule lets { $date: 'x', y: undefined } and a class instance with only a $date key print as a tagged Date
-  trigger: when applying the plan's rule that refuses a plain object whose only own key is a tag name
-  kind: gotcha
-  cause: undefined properties are dropped and class instances are written like plain objects, so own keys differ from written keys
-  resolution: apply the tag guard to the written keys of any object written by its keys
-  artifact: {"$date":"x"}
+- every checkOptions message is prefixed createLoader: even when load throws it, so the reload message follows suit
+  trigger: when adding a reload check to checkOptions in src/loader/index.ts
+  kind: pattern
+  cause: load and createLoader share one checkOptions
+  resolution: kept the createLoader: prefix for consistency and asserted it for both callers
+  artifact: createLoader: expected reload to be a boolean, got string
   signal: silent
-- TypeScript does not narrow the default branch of a typeof switch to object, so passing value on fails
-  trigger: when switching on typeof value and handling objects in the default branch
+- progress.txt was already modified (emptied, 82 lines removed) before this task began; git add -A will commit it with this task
+  trigger: when reading git status at session start
+  kind: location
+  cause: left by an earlier loop step, not by this task
+  resolution: left untouched and reported
+  signal: silent
+- perl s{}{} fails when the pattern itself holds unbalanced braces
+  trigger: when editing TypeScript with perl -0pi and a braces-delimited substitution
   kind: gotcha
-  cause: narrowing only applies to an explicit case 'object' label
-  resolution: use case 'object': instead of default; the switch is then exhaustive under noImplicitReturns
-  artifact: error TS2345: Argument of type '{} | undefined' is not assignable to parameter of type 'object'.
+  cause: brace delimiters nest with braces in the TS source
+  resolution: use the Edit tool for multi-line TS edits
+  artifact: Substitution replacement not terminated
   signal: loud
+- the plan's measurement held: bun ignores ?v= on a file:// URL, so 4 reload tests failed under the node form
+  trigger: when the reload specifier uses the file URL form under bun test
+  kind: gotcha
+  cause: bun keys its module registry for file URLs without the query
+  resolution: pick the plain-path specifier on bun, as reloadSpecifier does
+  signal: loud
+- the implicit-arrow-linebreak rule refuses a template-literal body wrapped onto the next line
+  trigger: when a multi-line arrow's body starts on the line after =>
+  kind: pattern
+  cause: the arrow-functions-beside style rule
+  resolution: move part of the template into a const so the arrow body fits on the => line
+  artifact: Expected no linebreak before this expression
+  signal: loud
+- the exit code echoed after the pipe is tail's, so a failing lint read as a pass
+  trigger: when piping a gate through tail to shorten output
+  kind: gotcha
+  cause: $? after a pipeline reports the last command in the pipeline
+  resolution: redirect the gate to a file, echo $? right after it, then tail the file
+  artifact: @stylistic/implicit-arrow-linebreak
+  signal: silent

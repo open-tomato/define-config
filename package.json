@@ -1,6 +1,6 @@
 {
   "name": "@open-tomato/define-config",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Typed config arrays with id-keyed merge and outcome-typed step graphs. Merges with $replace and $layer support, validates with Standard Schema. Dependency-free.",
   "private": false,
   "publishConfig": {
@@ -47,7 +47,8 @@
     "test": "bun test",
     "lint": "eslint .",
     "check-types": "tsc --noEmit",
-    "check-pack": "bun run scripts/pack-check.ts"
+    "check-pack": "bun run scripts/pack-check.ts",
+    "check-node": "bun run build && node scripts/reload-node.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
