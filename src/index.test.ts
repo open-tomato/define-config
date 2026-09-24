@@ -15,6 +15,7 @@ const FUNCTIONS = [
   'createLoader',
   'defineConfig',
   'merge',
+  'provenanceOf',
   'resolveGraph',
   'validate',
   'validateSections',
@@ -34,6 +35,9 @@ const TYPES = [
   'LoaderOptions',
   'MergeOptions',
   'MergeResult',
+  'Provenance',
+  'ProvenanceKind',
+  'ProvenanceRecord',
   'StandardSchemaV1',
   'StepEntry',
   'StepRegistry',
@@ -88,7 +92,7 @@ beforeAll(async () => {
 }, BUILD_TIMEOUT_MS);
 
 describe('dist/index.js', () => {
-  test('exports exactly the six functions', () => {
+  test('exports exactly the seven functions', () => {
     expect(sorted(Object.keys(runtime))).toEqual(sorted(FUNCTIONS));
   });
 

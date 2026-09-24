@@ -34,7 +34,7 @@
  */
 
 import type { Diagnostic } from '../diagnostics';
-import type { Source } from './lookup';
+import type { FoundSource } from './lookup';
 
 import { readFile } from 'node:fs/promises';
 import { extname, isAbsolute } from 'node:path';
@@ -190,7 +190,7 @@ function entriesOf(value: unknown): readonly Readonly<Record<string, unknown>>[]
 }
 
 /** Refuse a source that is not `{ layer, path }` with an absolute path. */
-function checkSource(source: unknown): asserts source is Source {
+function checkSource(source: unknown): asserts source is FoundSource {
   if (typeof source !== 'object' || source === null) {
     throw new TypeError(`readSource: expected a source { layer, path }, got ${kindOf(source)}`);
   }
@@ -239,7 +239,7 @@ function checkLoaders(loaders: unknown): asserts loaders is Loaders {
  *   fields and an absolute path, when `loaders` is not a plain object, or
  *   when the `loaders` entry for the file's extension is not a function.
  */
-export async function readSource(source: Source, loaders: Loaders = {}): Promise<ReadResult> {
+export async function readSource(source: FoundSource, loaders: Loaders = {}): Promise<ReadResult> {
   checkSource(source);
   checkLoaders(loaders);
   const { layer, path } = source;

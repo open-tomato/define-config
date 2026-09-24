@@ -151,6 +151,40 @@ describe('LayeredEntry', () => {
     const typo: LayeredEntry<Steps> = { $lyer: 'project' };
     expect<unknown[]>([removed.build, kept.lint, Object.keys(typo)]).toEqual([false, false, ['$lyer']]);
   });
+
+  test('accepts a root $replace: true beside $layer on a named-key root', () => {
+    const entry: LayeredEntry<T> = { $layer: 'project', $replace: true, name: 'x', steps: { build: { run: 'b' } } };
+    expect<unknown[]>([entry.$layer, entry.$replace, entry.name]).toEqual(['project', true, 'x']);
+  });
+
+  test('accepts a root $replace: true beside $layer on a keyed-map root', () => {
+    const entry: LayeredEntry<Steps> = { $layer: 'project', $replace: true, build: { run: 'bun run build' }, lint: false };
+    expect<unknown[]>([entry.$layer, entry.$replace, entry.lint]).toEqual(['project', true, false]);
+  });
+
+  test('refuses a root $replace set to false or 1 on a named-key root', () => {
+    // @ts-expect-error `$replace` is the literal `true`
+    const off: LayeredEntry<T> = { $layer: 'project', $replace: false, name: 'x' };
+    // @ts-expect-error `$replace` is the literal `true`
+    const one: LayeredEntry<T> = { $layer: 'project', $replace: 1, name: 'x' };
+    expect<unknown[]>([off.$replace, one.$replace]).toEqual([false, 1]);
+  });
+
+  test('refuses a root $replace set to false or 1 on a keyed-map root', () => {
+    // @ts-expect-error `$replace` is the literal `true`
+    const off: LayeredEntry<Steps> = { $layer: 'project', $replace: false, build: { run: 'b' } };
+    // @ts-expect-error `$replace` is the literal `true`
+    const one: LayeredEntry<Steps> = { $layer: 'project', $replace: 1, build: { run: 'b' } };
+    expect<unknown[]>([off.$replace, one.$replace]).toEqual([false, 1]);
+  });
+
+  test('still refuses $lyer and a root id set to true beside a root $replace', () => {
+    // @ts-expect-error `$lyer` is neither `$layer`, `$replace` nor a root id
+    const typo: LayeredEntry<Steps> = { $lyer: 'project', $replace: true };
+    // @ts-expect-error `true` is neither an entry, a `$replace` nor `false`
+    const id: LayeredEntry<Steps> = { $layer: 'project', $replace: true, lint: true };
+    expect<unknown[]>([Object.keys(typo), id.lint]).toEqual([['$lyer', '$replace'], true]);
+  });
 });
 
 describe('defineConfig', () => {

@@ -34,8 +34,11 @@ export interface LayerDir {
   readonly dir: string;
 }
 
-/** The file found for one layer. */
-export interface Source {
+/**
+ * The file found for one layer, before it is read. The loader's public
+ * `Source` adds the range of entries the file contributed once it is read.
+ */
+export interface FoundSource {
   /** Label of the layer the file was found for. */
   readonly layer: string;
   /** Absolute path of the file. */
@@ -135,7 +138,7 @@ export async function findSources(
   cwd: string,
   lookup: readonly string[],
   layers: readonly LayerDir[],
-): Promise<Source[]> {
+): Promise<FoundSource[]> {
   checkLookup(lookup);
   checkLayers(layers);
   const found = await Promise.all(

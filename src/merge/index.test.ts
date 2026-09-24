@@ -39,7 +39,7 @@ describe('the merged value', () => {
   });
 
   test('no entries merge to an empty value with no diagnostics', () => {
-    expect(merge([])).toEqual({ value: {}, diagnostics: [] });
+    expect(merge([])).toEqual({ value: {}, diagnostics: [], provenance: new Map() });
   });
 
   test('reserved keys never reach the value', () => {
@@ -203,5 +203,35 @@ describe('invalid arguments', () => {
   test('a required path that is not a string is refused', () => {
     // @ts-expect-error: required paths are strings
     expect(() => merge([], { required: [1] })).toThrow('required[0]: expected a dot-joined path');
+  });
+});
+
+describe('the provenance', () => {
+  test('a.x holds one record per entry, with a layer key only on the labelled one', () => {
+    // Arrange
+    const entries = [{ a: { x: 1 } }, { $layer: 'project', a: { x: 2 } }];
+
+    // Act
+    const records = merge(entries).provenance.get('a.x');
+
+    // Assert
+    expect(records).toEqual([{ entry: 0, kind: 'set' }, { entry: 1, layer: 'project', kind: 'set' }]);
+    expect(records?.[0]).not.toHaveProperty('layer');
+  });
+
+  test('the map, each record array and each record are frozen', () => {
+    // Arrange
+    const entries = [{ a: { x: 1 } }, { a: { x: 2 } }];
+
+    // Act
+    const { provenance } = merge(entries);
+    const records = provenance.get('a.x') ?? [];
+
+    // Assert
+    expect(records).toHaveLength(2);
+    expect(Object.isFrozen(provenance)).toBe(true);
+    expect(Object.isFrozen(records)).toBe(true);
+    expect(records.every((touch) => Object.isFrozen(touch))).toBe(true);
+    expect(() => (records as unknown[]).push({ entry: 2, kind: 'set' })).toThrow(TypeError);
   });
 });

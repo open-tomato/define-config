@@ -81,13 +81,39 @@ console.log(withRequired.diagnostics);
 The two entries sit in different layers. Without the `$layer` labels they would share the implicit
 layer, and entry 1 setting `a` again would also produce a `duplicate-key` warning at `a`.
 
-An entry typed as `LayeredEntry<T>` takes `$layer` as a string whether the root of `T` has named
-keys or is a keyed map. When the root is a keyed map, its ids are typed as strings that start with
-a printable ASCII character other than `$`, so a misspelt `$lyer` is a type error, and a root id
-set to `true` is a type error as it is in a `ConfigEntry`.
+An entry typed as `LayeredEntry<T>` takes `$layer` as a string and `$replace` as the literal
+`true` whether the root of `T` has named keys or is a keyed map; a root `$replace: true` replaces
+the whole value merged so far, and any other `$replace` value is a type error. When the root is a
+keyed map, its ids are typed as strings that start with a printable ASCII character other than
+`$`, so a misspelt `$lyer` is a type error, and a root id set to `true` is a type error as it is
+in a `ConfigEntry`.
 
 The merged value never shares a plain object or an array with an entry, and no entry is changed.
 Functions and class instances (a `Date`, a `Map`) are values: they are kept by reference.
+
+`result.provenance` records which entries touched which key path. It maps each dot-joined path
+(`''` for a `$replace: true` on an entry itself) to that path's records in entry order, each
+`{ entry, kind }` plus `layer` when the entry has a `$layer`. The last record names the entry that
+last touched the path. `kind` is `set`, `remove` (a `false` there; when last, the path is absent)
+or `replace` (a `$replace: true` there). Paths below a replaced key keep their earlier records, so
+a path can end on `set` and still be absent because an ancestor was replaced. The map, its record
+arrays and its records are frozen copies.
+
+```ts
+import { merge } from '@open-tomato/define-config';
+
+const result = merge([
+  { a: { x: 1 } },
+  { $layer: 'project', a: { x: 2 } },
+]);
+
+console.log(result.provenance.get('a.x'));
+// [{ entry: 0, kind: 'set' }, { entry: 1, layer: 'project', kind: 'set' }]
+```
+
+`provenanceOf(result, path)` reads one path's records out of any `{ provenance }`, taking the path
+dot-joined (`'a.x'`) or as an array (`['a', 'x']`), with `''` for the root; a path no entry touched
+yields `[]`.
 
 ## validate
 
@@ -233,11 +259,39 @@ console.log(diagnostics);
 // every problem, in stage order
 
 console.log(sources);
-// [{ layer, path }] for each layer that had a file, with an absolute path
+// [{ layer, path, entries }] for each layer that had a file, with an absolute path
 ```
 
 A relative `dir` resolves against the directory passed to `load`. A file that cannot be read
 yields a `load-failed` error and its layer contributes nothing; `load` still returns the rest.
+
+`load` also returns `provenance`, the map `merge` records over the entries read (every layer's
+entries concatenated in layer order), and each source carries `entries: [from, to]`, the half-open
+range of entry indexes its file contributed. The ranges follow layer order and meet end to start,
+so every record's `entry` falls in exactly one source's range; a file that failed to read keeps
+its place in `sources` with an empty range (`from === to`). To find the file behind a record, look
+up the source whose range holds its `entry`:
+
+```ts
+import { createLoader, provenanceOf } from '@open-tomato/define-config';
+
+const loader = createLoader({
+  lookup: ['rafa.config.ts', '.rafa/config.yaml'],
+  layers: [
+    { layer: 'user', dir: '/home/me' },
+    { layer: 'project', dir: '.' },
+  ],
+  loaders: { '.yaml': (text) => Bun.YAML.parse(text) },
+});
+
+const result = await loader.load(process.cwd());
+const last = provenanceOf(result, 'build.retries').at(-1);
+const file = result.sources.find(({ entries: [from, to] }) => last !== undefined && last.entry >= from && last.entry < to);
+
+console.log(last, file?.path);
+// run in /work/project, with one user entry and a project file that sets build.retries:
+// { entry: 1, layer: 'project', kind: 'set' } '/work/project/rafa.config.ts'
+```
 
 ## Diagnostic Codes
 

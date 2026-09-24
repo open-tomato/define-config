@@ -13,7 +13,7 @@
  */
 
 import type { Diagnostic } from '../diagnostics';
-import type { MergeState } from './apply';
+import type { MergeState, Provenance } from './apply';
 import type { DuplicatesOption } from './duplicates';
 
 import { apply, initialState } from './apply';
@@ -52,10 +52,43 @@ export interface MergeResult {
    * the `entries` array passed to {@link merge}.
    */
   readonly diagnostics: readonly Diagnostic[];
+  /**
+   * Which entries touched which key path, and how. Each key is a dot-joined
+   * path (`'a.x'`; a `$replace: true` on an entry itself records at `''`),
+   * and each value lists that path's records in the order the entries
+   * applied: `{ entry, kind }`, plus `layer` when the entry carries a
+   * `$layer` (an entry without one yields a record with no `layer` key).
+   * A map merged into a map already at a path records nothing at the path
+   * itself, only at the keys below it that it writes.
+   *
+   * - The last record at a path names the entry that last touched it.
+   * - `remove` records an entry with `false` at the path, whether or not
+   *   the key existed; when it is the last record, the path is absent from
+   *   {@link MergeResult.value}.
+   * - `replace` records an entry with `{ $replace: true, … }` at the path.
+   *   The paths below it keep the records of the entries before it, so a
+   *   path below may end on an earlier `set` and still be absent from
+   *   `value`: a later `replace` at an ancestor path dropped it.
+   *
+   * The map is a copy of the one the merge built, frozen, and so is every
+   * record array and record in it. `Object.freeze` does not stop
+   * `Map.prototype.set`; the type is a `ReadonlyMap`, and a write that
+   * casts it away changes only this result.
+   */
+  readonly provenance: Provenance;
 }
 
 /** The required paths used when the host passes none. */
 const NO_REQUIRED: readonly string[] = [];
+
+/** Copy the merge state's provenance, freezing the map, arrays and records. */
+function frozenProvenance(provenance: Provenance): Provenance {
+  const copy = new Map(Array.from(provenance, ([key, records]) => [
+    key,
+    Object.freeze(records.map((touch) => Object.freeze({ ...touch }))),
+  ] as const));
+  return Object.freeze(copy);
+}
 
 /** Read and check `options`, filling in the defaults. */
 function optionsOf(options: unknown): Required<MergeOptions> {
@@ -84,12 +117,15 @@ function optionsOf(options: unknown): Required<MergeOptions> {
  *
  * Each entry is applied with its position in `entries` as its index, so
  * the `entry` of every diagnostic points back into `entries`. An empty
- * `entries` merges to `{}` with no diagnostics.
+ * `entries` merges to `{}` with no diagnostics and an empty provenance.
  *
  * @example
  * ```ts
  * merge([{ a: { x: 1, y: 2 } }, { a: { y: 3, z: 4 } }]);
- * // { value: { a: { x: 1, y: 3, z: 4 } }, diagnostics: [] }
+ * // { value: { a: { x: 1, y: 3, z: 4 } }, diagnostics: [], provenance: Map(4) {…} }
+ *
+ * merge([{ a: { x: 1 } }, { $layer: 'project', a: { x: 2 } }]).provenance.get('a.x');
+ * // [{ entry: 0, kind: 'set' }, { entry: 1, layer: 'project', kind: 'set' }]
  *
  * merge([{ a: { x: 1 } }, { a: { $replace: true, z: 4 } }], { required: ['a.x'] });
  * // { value: { a: { z: 4 } },
@@ -100,7 +136,8 @@ function optionsOf(options: unknown): Required<MergeOptions> {
  *   plain object, optionally labelled with a string `$layer`.
  * @param options - `duplicates` (default `'warn'`) and `required`
  *   (default none); see {@link MergeOptions}.
- * @returns The merged value and the diagnostics of both checks.
+ * @returns The merged value, the diagnostics of both checks, and the
+ *   provenance of every key path touched.
  * @throws {TypeError} When `entries` is not an array; when an entry (or a
  *   hole in a sparse array) is not a plain object or its `$layer` is not a
  *   string; when `options` is not an object; when `options.duplicates` is
@@ -122,5 +159,5 @@ export function merge(entries: readonly unknown[], options?: MergeOptions): Merg
     ...duplicates(state.provenance, settings.duplicates),
     ...required(state.value, state.provenance, settings.required),
   ];
-  return { value: state.value, diagnostics };
+  return { value: state.value, diagnostics, provenance: frozenProvenance(state.provenance) };
 }
