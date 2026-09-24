@@ -1,3 +1,24 @@
+- a non-dot temp dir with a tsconfig extending ../tsconfig.json and include [block.ts] type-checks the block against src/index.ts
+  trigger: when type-checking a README ts fence by extraction
+  kind: pattern
+  cause: lint parses README fences but does not type-check them
+  resolution: rewrite the package specifier to ../src/index, run bunx tsc -p, and plant an error as a control
+  artifact: readmecheck/tsconfig.json
+  signal: silent
+- src/loader/read.ts imports Source from ./lookup for readSource and checkSource
+  trigger: when splitting the public Source from the lookup-internal type
+  kind: location
+  cause: readSource takes the found source before any range exists
+  resolution: renamed the lookup type to FoundSource and updated read.ts's type-only import and two annotations
+  artifact: import type { Source } from './lookup';
+  signal: loud
+- the sources toEqual in src/loader/acceptance.test.ts also breaks, beyond the loader index.test.ts assertions the plan listed
+  trigger: when adding entries to Source of LoadResult.sources
+  kind: gotcha
+  cause: the acceptance test asserts result.sources whole
+  resolution: added entries [0, 1] and [1, 2] there as the minimal repair; the next task extends the file
+  artifact: Property 'entries' is missing in type '{ layer: string; path: string; }' but required in type 'Source'.
+  signal: loud
 - an untyped const array of records widens kind to string, so check-types fails while bun test passes
   trigger: when writing an expected-records array in a test with kind literals
   kind: gotcha

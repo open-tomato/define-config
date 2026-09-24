@@ -2,6 +2,8 @@ import { join } from 'node:path';
 
 import { expect, test } from 'bun:test';
 
+import { provenanceOf } from '../provenance';
+
 import { createLoader } from '.';
 
 const FIXTURES = join(import.meta.dir, 'fixtures', 'acceptance');
@@ -36,4 +38,39 @@ test('loads a project rafa.config.ts over a user .rafa/config.yaml', async () =>
   });
   expect(result.graph).toBeUndefined();
   expect(Number.isFinite(elapsed)).toBe(true);
+});
+
+test('the fixture sources tile the entries and map a path to its files', async () => {
+  // Arrange
+  const loader = createLoader({
+    lookup: ['rafa.config.ts', '.rafa/config.yaml'],
+    layers: [
+      { layer: 'user', dir: 'user' },
+      { layer: 'project', dir: 'project' },
+    ],
+    loaders: { '.yaml': (text: string): unknown => Bun.YAML.parse(text) },
+  });
+
+  // Act
+  const result = await loader.load(FIXTURES);
+  const total = result.sources.at(-1)?.entries[1] ?? 0;
+  const touched = [...result.provenance.values()].flat().map(record => record.entry);
+  const owners = result.sources.map(source => source.path);
+  const ownerOf = (entry: number): string | undefined => result.sources
+    .find(source => entry >= source.entries[0] && entry < source.entries[1])?.path;
+
+  // Assert
+  expect(result.sources.map(source => source.entries)).toEqual([[0, 1], [1, 2]]);
+  expect(result.sources[0]?.entries[0]).toBe(0);
+  result.sources.slice(1).forEach((source, index) => {
+    expect(source.entries[0]).toBe(result.sources[index]?.entries[1] ?? -1);
+  });
+  expect(total).toBe(2);
+  expect(touched.length).toBeGreaterThan(0);
+  touched.forEach((entry) => {
+    expect(entry).toBeGreaterThanOrEqual(0);
+    expect(entry).toBeLessThan(total);
+    expect(ownerOf(entry)).toBeDefined();
+  });
+  expect(provenanceOf(result, 'build.retries').map(record => ownerOf(record.entry))).toEqual(owners);
 });
