@@ -33,15 +33,22 @@ describe('StepEntry', () => {
     expect<unknown[]>([bad.when, good.when]).toEqual(['during:lint', 'after:lint']);
   });
 
-  test('accepts repeat: true or a number on an edge object and refuses a string', () => {
-    // @ts-expect-error `repeat` is a boolean or a number
-    const bad: EdgeTarget = { to: 'build', repeat: 'twice' };
+  test('accepts repeat: true on an edge object', () => {
     const marked: EdgeTarget = { to: 'build', repeat: true };
+    expect(marked).toEqual({ to: 'build', repeat: true });
+  });
+
+  test('refuses repeat: 2, repeat: false and repeat: \'twice\' on an edge object', () => {
+    // @ts-expect-error `repeat` is the literal `true`, not a number
     const counted: EdgeTarget = { to: 'build', repeat: 2 };
-    expect<unknown[]>([bad, marked, counted]).toEqual([
-      { to: 'build', repeat: 'twice' },
-      { to: 'build', repeat: true },
+    // @ts-expect-error `repeat` is the literal `true`, not `false`
+    const unmarked: EdgeTarget = { to: 'build', repeat: false };
+    // @ts-expect-error `repeat` is the literal `true`, not a string
+    const worded: EdgeTarget = { to: 'build', repeat: 'twice' };
+    expect<unknown[]>([counted, unmarked, worded]).toEqual([
       { to: 'build', repeat: 2 },
+      { to: 'build', repeat: false },
+      { to: 'build', repeat: 'twice' },
     ]);
   });
 

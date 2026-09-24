@@ -25,12 +25,11 @@ export type EdgeTarget =
     to: string;
     /**
      * `true` marks an edge that loops back to an earlier step entry as a
-     * wanted loop, so `resolveGraph` reports no `cycle` for it. A number
-     * (how many times the host lets the edge be taken in one run) is kept
-     * on the {@link GraphEdge} for the host, but does not mark the loop:
-     * only `true` does.
+     * wanted loop, so `resolveGraph` reports no `cycle` for it. Only the
+     * literal `true` is accepted: `false`, a number or any other value is a
+     * type error; leave `repeat` out for an edge that is not a loop.
      */
-    repeat?: boolean | number;
+    repeat?: true;
   };
 
 /** What a step entry does on an outcome: follow an edge to its target. */
@@ -144,9 +143,11 @@ export interface GraphEdge {
   /** The outcome the edge is taken on. */
   outcome: string;
   /**
-   * The `repeat` of the edge object the handler was written as: `true`, or
-   * how many times the edge may be taken in one run, for an edge meant to
-   * loop back; `false` for a handler written as an id or without `repeat`.
+   * The `repeat` of the edge object the handler was written as: `true` for
+   * an edge meant to loop back; `false` for a handler written as an id or
+   * without `repeat`. A number reaches it only from a config that was not
+   * typed as {@link EdgeTarget}, which accepts `repeat: true` alone; it is
+   * kept for the host but does not mark the loop.
    */
   repeat: boolean | number;
 }

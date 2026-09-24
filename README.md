@@ -150,8 +150,9 @@ console.log(result.graph.edges);
 ```
 
 A `repeat: true` edge marks a loop as intentional; without it, a back edge yields a `cycle` error.
-Only `true` marks the loop: a number for `repeat` is kept on the edge for the host, and the back
-edge is still a `cycle`.
+`repeat` is typed as the literal `true`: `repeat: false`, `repeat: 2` or `repeat: 'twice'` is a
+type error. A config that bypasses the types can still carry another value; it is kept on the edge
+for the host, but only `true` marks the loop, so the back edge is still a `cycle`.
 
 ```ts
 import { resolveGraph } from '@open-tomato/define-config';
