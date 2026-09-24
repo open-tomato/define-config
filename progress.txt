@@ -1,3 +1,17 @@
+- lint passed on the new script using process.stdout.write/process.stderr.write; console.log was avoided per the no-console-in-production rule
+  trigger: when writing a scripts/*.mjs that prints output
+  kind: gotcha
+  cause: scripts/**/*.mjs gets the shared rule set with Node globals
+  resolution: use process.stdout.write in scripts
+  artifact: scripts/reload-node.mjs
+  signal: silent
+- the reload-off control in a second directory reads 8000 on its second load under node 22, which shows the ESM cache hides the edit and the reload reading is not a false positive
+  trigger: when checking that reload works under node against the built dist
+  kind: pattern
+  cause: node caches an ESM module by its file URL, so a second import with no query returns the first module
+  resolution: keep the control leg in check-node
+  artifact: control (reload: false): first load 8000, second load 8000
+  signal: silent
 - load is not exported from src/index.ts, only createLoader
   trigger: when writing tests that must import only from ../index
   kind: gotcha
