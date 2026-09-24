@@ -2,24 +2,62 @@
 
 This is a **single-package library** for typed config arrays with id-keyed merge, Standard Schema validation, and outcome-typed step graphs. Dependency-free, fully typed, published to npmjs.
 
-**Version:** 0.1.0 · **Language:** TypeScript · **Runtime:** Bun
+**Language:** TypeScript · **Runtime:** Bun
 
 ## Package Layout
 
 ```text
 src/
-├── <area>/
-│   ├── <module>.ts          # Exported module with TSDoc
-│   └── <module>.test.ts     # Colocated unit tests (bun test)
-index.ts                      # Main entry point (re-exports all public symbols)
+├── index.ts                   # Entry point (re-exports all public symbols)
+├── define-config.ts           # Root config entry type
+├── diagnostics.ts             # Diagnostic codes (with tests)
+├── provenance.ts              # Entry provenance tracking (with tests)
+├── standard-schema.ts         # Standard Schema plugin (with tests)
+├── types.ts                   # Shared type definitions (with tests)
+├── validate.ts                # Input validation helpers (with tests)
+├── merge/
+│   ├── index.ts               # Public merge() export
+│   ├── apply.ts               # Apply entry to accumulator
+│   ├── duplicates.ts          # Duplicate key detection
+│   ├── plain-object.ts        # Plain object identification
+│   ├── required.ts            # Required field checks
+│   └── <module>.test.ts       # Colocated unit tests
+├── graph/
+│   ├── index.ts               # Public resolveGraph() export
+│   ├── build.ts               # Build step graph
+│   ├── cycles.ts              # Cycle detection
+│   ├── flatten.ts             # Flatten nested steps
+│   ├── normalise.ts           # Normalize flow/step names
+│   ├── reachability.ts        # Reachability analysis
+│   ├── runner.ts              # Graph execution (unattended)
+│   ├── successors.ts          # Find successor nodes
+│   ├── types.ts               # Graph-specific types
+│   ├── walk.ts                # Graph traversal
+│   └── <module>.test.ts       # Colocated unit tests
+├── loader/
+│   ├── index.ts               # Public createLoader() export
+│   ├── lookup.ts              # Lookup library entries
+│   ├── read.ts                # Read and parse YAML/JSON
+│   ├── reload.ts              # Dynamic reload capability
+│   ├── fixtures/acceptance/   # Acceptance test data
+│   └── <module>.test.ts       # Colocated unit tests
+└── digest/
+    ├── canonicalize.ts        # Canonicalize config structure
+    ├── digest.ts              # Generate content digests
+    └── <module>.test.ts       # Colocated unit tests
 
-dist/
-├── index.js                  # ESM output (built)
-├── index.d.ts                # TypeScript declarations
+scripts/
+├── gates.ts                   # Run all linting/test gates
+├── pack-check.ts              # Verify npm pack contents
+├── reload-node.mjs            # Node.js reload verification
+└── <script>.test.ts           # Colocated unit tests
 
-test outputs:
-├── .bun/                     # Bun runtime cache
-└── node_modules/             # Gitignored dev dependencies
+context/
+└── packaging.md               # Pack validation reference
+
+dist/                          # Built output (generated, not tracked)
+├── index.js                   # ESM bundle
+└── index.d.ts                 # TypeScript declarations
 ```
 
 Files stay under 800 lines; split before a file nears the cap. All exported symbols carry TSDoc (function signatures, interface fields, type descriptions).
@@ -63,17 +101,36 @@ during development, `bun run <gate>` stays available to run a single gate.
 
 ## Reserved Keys in Config Objects
 
-The library recognizes these keys with special semantics:
+The library recognizes these keys with special semantics. Merge-time keys control how entries combine; flow-time keys structure step graphs. See [README.md#merge](README.md#merge) and [README.md#resolveGraph](README.md#resolvegraph) for the full rules.
 
 ### Merge-time keys
-- **`$replace: true`** — Inside a keyed map, replaces that entire subtree with the new value, ignoring defaults beneath it.
-- **`<key>: false`** — At a map entry, marks that key for removal (deletes it from the merged result).
-- **`$layer`** — On a top-level entry, labels its layer (metadata, not processed by the merge engine; visible in diagnostics).
+- **`$replace: true`** — Inside a keyed map, replaces that entire subtree with the new value. On the entry itself,
+  replaces the whole value merged so far. Only the form `{ $replace: true }` replaces; any other value for the key
+  is a type error (caught at compile time by `defineConfig`). Source: `src/merge/apply.ts`
+- **`<key>: false`** — Removes the key from the merged result. A map entry set to `false` yields a `remove` provenance
+  record. Removing a key the host lists in `required` yields a `required-dropped` error. Source: `src/merge/apply.ts`
+- **`$layer`** — On a top-level entry only, labels its layer for duplicate detection and provenance tracking. Must be
+  a string; any other type throws `TypeError`. The value is recorded on each `ProvenanceRecord.layer` but never in
+  the merged value. Each entry's `$layer` is set per source by the loader, overriding any `$layer` the file wrote.
+  Source: `src/merge/apply.ts`
 
 ### Flow-time keys (in step graphs)
-- **`$start`** — Names the entry step (the first step a flow executes); every flow has exactly one.
-- **`$unattended: true`** — On a flow root, marks it as unattended (can run without user input; default is attended).
-- **All other keys** — Define step entries and their wiring (target step names, data payloads, etc.).
+- **`$start`** — Optional; names the entry step (the first step a flow executes). A flow without it starts at its first step entry. A `$start` naming no entry is `unknown-step`. Source: `src/graph/build.ts`
+- **`$unattended: true`** — On a flow root, marks it as unattended (can run without user input; default is attended). Source: `src/graph/build.ts`
+- **Step ids** — Every key not reserved (all keys except `$start` and `$unattended`). Define step entries keyed by step id; each entry is a plain object. Source: `src/graph/build.ts`
+
+### Step entry keys
+- **`step`** — Optional string; the name of the registered step this entry runs. Defaults to the entry's id when absent. Source: `src/graph/build.ts`
+- **`on`** — Optional plain object; a map of outcome names to handlers (step ids or `{ to, repeat }` edge objects). Source: `src/graph/build.ts`
+- **`onTrue`** — Sugar for `on: { true: handler }`. Folds into `on` during normalization. Source: `src/graph/normalise.ts`
+- **`onFalse`** — Sugar for `on: { false: handler }`. Folds into `on` during normalization. Source: `src/graph/normalise.ts`
+- **`onSuccess`** — Sugar for `on: { success: handler }`. Folds into `on` during normalization. Source: `src/graph/normalise.ts`
+- **`onFail`** — Sugar for `on: { fail: handler }`. Folds into `on` during normalization. Source: `src/graph/normalise.ts`
+- **`onChoice`** — Sugar for a map of outcome names to handlers; each key becomes an outcome in `on`. Folds into `on` during normalization. Source: `src/graph/normalise.ts`
+- **`when`** — Optional string; a placement hook of the form `before:<id>` or `after:<id>` that positions this step relative to another without an edge. Source: `src/graph/build.ts`
+- **`expect`** — Optional string; the expected outcome for this entry. Validates that the step declares this outcome. Source: `src/graph/build.ts`
+
+See [README.md#resolveGraph](README.md#resolvegraph) for the full rules and examples.
 
 ## Test Coverage & TDD
 

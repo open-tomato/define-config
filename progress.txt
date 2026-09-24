@@ -1,62 +1,49 @@
-- table cells contain substantial paragraph text matching existing documentation structure
-  trigger: gate descriptions in table cells
-  kind: pattern
-  signal: silent
-- progress.txt was already modified in the working tree, and git add -A will commit it with this task
-  trigger: when running git diff before the loop commits
+- PIPESTATUS printed empty, so the first gates exit code was lost
+  trigger: when capturing a piped command's exit code inside a subshell redirected to a file
   kind: gotcha
-  cause: the loop's own progress file is not ignored by git
-  resolution: left untouched
-  artifact: progress.txt
+  cause: the echo ran in the parent shell after the subshell's pipeline ended
+  resolution: rerun without a pipe and read $? directly
+  artifact: exit=
   signal: silent
-- lint fails the static import even with dist/ present, because the gate lint pass runs after gates removes dist/
-  trigger: when the static dist import is added to scripts/reload-node.mjs with dist/ built
-  kind: pattern
-  cause: gates.ts removes dist/ before lint, so import/no-unresolved cannot resolve ../dist/index.js
-  resolution: keep the run-time import() in reload-node.mjs
-  artifact: Unable to resolve path to module '../dist/index.js'
-  signal: loud
-- bun run puts a node shim that is bun on PATH, so Bun.which('node') always finds one; the probe must run the candidate and check process.versions.bun
-  trigger: when running bun run gates with no real node on PATH
-  kind: gotcha
-  cause: bun run prepends a bun-node-<hash> dir holding a node link to bun
-  resolution: findRealNode runs the candidate and treats bun as no node
-  artifact: check-node: skipped (no node on PATH)
-  signal: silent
-- artifact: PLAN_TRACKER-rafa-28-bun-run-gates.md: Bun.which('node')
-- bun run prepends a temp dir with a node shim (bun) to PATH, so Bun.which('node') inside gates.ts is never null; the skip line and the CI=true failure are unreachable, and check-node runs under bun's shim rather than real Node
-  trigger: when running bun run gates with node removed from PATH
-  kind: gotcha
-  cause: bun run creates /tmp/bun-node-<hash>/node for scripts it runs
-  resolution: make the probe in scripts/gates.ts ignore bun-node-* shim dirs, or resolve node against the PATH minus that dir
-  artifact: /private/tmp/bun-node-0d9b296af/node
-  signal: silent
-- CI already runs bun run build before bun run check-node, so dropping the script's own build does not break CI
-  trigger: removing the build step from the check-node script
+- the flow start name is at result.graph.flows.<flow>.start, not on the result root
+  trigger: when reading the start step from resolveGraph output
   kind: location
-  cause: ci.yml orders build before check-node
-  resolution: no CI change needed
-  artifact: - run: bun run check-node
+  cause: resolveGraph returns a { graph: { nodes, edges, hooks, flows } } wrapper
+  resolution: read g.graph.flows.f.start
+  artifact: graph.flows.f.start
   signal: silent
-- artifact: PLAN_TRACKER-rafa-28-bun-run-gates.md: progress.txt | 94 ----
-- planting bugs one at a time (stop-on-failure, the CI comparison) showed that the targeted tests fail
-  trigger: when checking that a test run under planted bugs actually fails
+- Test 1: $start valid ref → start=f.first ✓; Test 2: $start unknown → start='' + unknown-step error ✓; Test 3: $start omitted → starts at first ✓; Test 4: $unattended works ✓; Test 5: step/on/expect keys recognized ✓; Test 6: sugar keys (onTrue/onFalse) fold ✓; Test 7: when: hooks work ✓
+  trigger: scratch run output
+  kind: location
+  artifact: All tests completed successfully with expected outputs
+  signal: loud
+- Now directs readers to both README.md#merge and README.md#resolveGraph for full rules
+  trigger: intro text updated
   kind: pattern
-  cause: a passing suite alone cannot show that the assertions can fail
-  resolution: plant with Edit, run the single test file, restore with Edit, then rerun
-  artifact: (fail) runGates > fails at check-node when node is missing under CI=true
+  artifact: Line 104: AGENTS.md
   signal: loud
-- import/order wants node: builtins first, a blank line, then bun:test
-  trigger: when writing a test file that imports both bun:test and node: builtins
-  kind: gotcha
-  cause: the ESLint config treats bun:test as external and node: modules as builtin
-  resolution: put the node: imports in their own group before the bun:test import
-  artifact: `bun:test` import should occur after import of `node:path`
+- All 9 keys cited with sources: step, on, onTrue, onFalse, onSuccess, onFail, onChoice, when, expect
+  trigger: step entry keys subsection added
+  kind: pattern
+  artifact: Lines 122-131: AGENTS.md
   signal: loud
-- check-pack prints its own 'check-pack: ok' line, so a filter on the gate name matches seven lines, not six
-  trigger: when grepping bun run gates output for lines starting with a gate name
-  kind: gotcha
-  cause: scripts/pack-check.ts prints 'check-pack: ok' on success, and the runner inherits the gate's stdout
-  resolution: match runner lines on ': exit ' or 'skipped' rather than on the name prefix
-  artifact: check-pack: ok
-  signal: silent
+- $start detailed (optional, first-step-default, unknown-step behavior); $unattended and step-ids each one bullet with source
+  trigger: flow-time keys fully specified with source citations
+  kind: pattern
+  artifact: Lines 118-120: AGENTS.md
+  signal: loud
+- lint, check-types, test, build, check-pack, check-node all report exit 0
+  trigger: all gates pass after changes
+  kind: pattern
+  artifact: all gates: exit 0
+  signal: loud
+- Section intro now directs readers to README.md#merge for complete documentation
+  trigger: added README link for full rules
+  kind: pattern
+  artifact: line 104: See [README.md#merge](README.md#merge) for the full rules
+  signal: loud
+- AGENTS.md lines 107-115 now cite src/merge/apply.ts and state each key's behavior precisely
+  trigger: merge-time keys rewritten with full specification
+  kind: location
+  artifact: lines 107-115 in AGENTS.md
+  signal: loud
