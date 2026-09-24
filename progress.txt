@@ -1,3 +1,24 @@
+- progress.txt was already modified before this task and will be committed with it by git add -A
+  trigger: when reading git status at session start
+  kind: location
+  cause: left by an earlier loop step
+  resolution: left untouched
+  artifact: M progress.txt
+  signal: silent
+- README.md section Module Cache (lines 442-447) describes caching without mentioning reload; still true for the default so left for the Documentation stage
+  trigger: when checking tracked docs for sentences the reload option affects
+  kind: location
+  cause: the README update is scheduled as its own stage
+  resolution: left unchanged and reported
+  artifact: ## Module Cache
+  signal: silent
+- every checkOptions message is prefixed createLoader: even when load throws it, so the reload message follows suit
+  trigger: when adding a reload check to checkOptions in src/loader/index.ts
+  kind: pattern
+  cause: load and createLoader share one checkOptions
+  resolution: kept the createLoader: prefix for consistency and asserted it for both callers
+  artifact: createLoader: expected reload to be a boolean, got string
+  signal: silent
 - progress.txt was already modified (emptied, 82 lines removed) before this task began; git add -A will commit it with this task
   trigger: when reading git status at session start
   kind: location
