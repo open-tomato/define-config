@@ -11,13 +11,26 @@
  * It exits 0 only when the reloading second load reads 9000 and the
  * control's second load reads 8000, and 1 naming each mismatch otherwise.
  * Both directories are removed in a `finally`.
+ *
+ * `dist/index.js` is a build output, not a source module, so it is loaded
+ * with `import()` at run time rather than a static import: lint runs over
+ * source before any build and cannot resolve it. When it is missing the
+ * script exits 1 saying so, instead of failing inside Node's resolver.
  */
 
+import { existsSync } from 'node:fs';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { createLoader } from '../dist/index.js';
+const ENTRY = new URL('../dist/index.js', import.meta.url);
+
+if (!existsSync(ENTRY)) {
+  process.stderr.write('reload-node: dist/index.js is missing; run `bun run build` first\n');
+  process.exit(1);
+}
+
+const { createLoader } = await import(ENTRY.href);
 
 const FILE = 'rafa.config.mjs';
 
