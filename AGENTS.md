@@ -8,18 +8,56 @@ This is a **single-package library** for typed config arrays with id-keyed merge
 
 ```text
 src/
-├── <area>/
-│   ├── <module>.ts          # Exported module with TSDoc
-│   └── <module>.test.ts     # Colocated unit tests (bun test)
-index.ts                      # Main entry point (re-exports all public symbols)
+├── index.ts                   # Entry point (re-exports all public symbols)
+├── define-config.ts           # Root config entry type
+├── diagnostics.ts             # Diagnostic codes (with tests)
+├── provenance.ts              # Entry provenance tracking (with tests)
+├── standard-schema.ts         # Standard Schema plugin (with tests)
+├── types.ts                   # Shared type definitions (with tests)
+├── validate.ts                # Input validation helpers (with tests)
+├── merge/
+│   ├── index.ts               # Public merge() export
+│   ├── apply.ts               # Apply entry to accumulator
+│   ├── duplicates.ts          # Duplicate key detection
+│   ├── plain-object.ts        # Plain object identification
+│   ├── required.ts            # Required field checks
+│   └── <module>.test.ts       # Colocated unit tests
+├── graph/
+│   ├── index.ts               # Public resolveGraph() export
+│   ├── build.ts               # Build step graph
+│   ├── cycles.ts              # Cycle detection
+│   ├── flatten.ts             # Flatten nested steps
+│   ├── normalise.ts           # Normalize flow/step names
+│   ├── reachability.ts        # Reachability analysis
+│   ├── runner.ts              # Graph execution (unattended)
+│   ├── successors.ts          # Find successor nodes
+│   ├── types.ts               # Graph-specific types
+│   ├── walk.ts                # Graph traversal
+│   └── <module>.test.ts       # Colocated unit tests
+├── loader/
+│   ├── index.ts               # Public createLoader() export
+│   ├── lookup.ts              # Lookup library entries
+│   ├── read.ts                # Read and parse YAML/JSON
+│   ├── reload.ts              # Dynamic reload capability
+│   ├── fixtures/acceptance/   # Acceptance test data
+│   └── <module>.test.ts       # Colocated unit tests
+└── digest/
+    ├── canonicalize.ts        # Canonicalize config structure
+    ├── digest.ts              # Generate content digests
+    └── <module>.test.ts       # Colocated unit tests
 
-dist/
-├── index.js                  # ESM output (built)
-├── index.d.ts                # TypeScript declarations
+scripts/
+├── gates.ts                   # Run all linting/test gates
+├── pack-check.ts              # Verify npm pack contents
+├── reload-node.mjs            # Node.js reload verification
+└── <script>.test.ts           # Colocated unit tests
 
-test outputs:
-├── .bun/                     # Bun runtime cache
-└── node_modules/             # Gitignored dev dependencies
+context/
+└── packaging.md               # Pack validation reference
+
+dist/                          # Built output (generated, not tracked)
+├── index.js                   # ESM bundle
+└── index.d.ts                 # TypeScript declarations
 ```
 
 Files stay under 800 lines; split before a file nears the cap. All exported symbols carry TSDoc (function signatures, interface fields, type descriptions).
