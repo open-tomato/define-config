@@ -1,0 +1,7 @@
+- bun run lint passes regardless of YAML content
+  trigger: when adding YAML under .github
+  kind: gotcha
+  cause: eslint config lints ts/js/md/json only, not YAML
+  resolution: validate YAML with Bun.YAML.parse or check-jsonschema instead
+  artifact: $ eslint .
+  signal: silent
