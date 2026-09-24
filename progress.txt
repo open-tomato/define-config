@@ -1,3 +1,39 @@
+- artifact: PLAN_TRACKER-rafa-13-0-1-1.md: A `$replace: true` on the entry itself replaces the whole value merged so far
+- the first-character helper (Heads string plus Chars) now exists word for word in both src/types.ts (RootIdHeads) and src/graph/types.ts (StepIdHeads)
+  trigger: when adding a $-excluding key set in src/types.ts
+  kind: location
+  cause: the graph helper is module-private, and sharing it would change src/graph/types.ts outside this task
+  resolution: left duplicated; a follow-up can move one copy to a shared internal type and import it from both modules
+  artifact: type RootIdHeads = 
+  signal: silent
+- expect([bad.x, good.x]).toEqual([...]) fails check-types because the array literal infers the declared type and toEqual refuses the bad runtime value
+  trigger: when asserting a mix of a correctly and an incorrectly typed value in one expect() in a type test
+  kind: gotcha
+  cause: bun:test toEqual is typed against the inferred element type of expect's argument
+  resolution: write expect<unknown[]>(...) as src/graph/types.test.ts does
+  artifact: error TS2769: No overload matches this call.
+  signal: loud
+- the type refuses empty, $-prefixed and non-ASCII-first root ids and string-typed index reads on a keyed-map root, which merge still accepts
+  trigger: when comparing the typed root-id set of LayeredEntry with what merge accepts at run time
+  kind: gotcha
+  cause: TypeScript has no negated template types, so the exclusion enumerates printable ASCII first characters minus $
+  resolution: documented in the LayeredEntry TSDoc and a README paragraph under merge
+  artifact: type RootId = `${Chars<RootIdHeads>}${string}`;
+  signal: silent
+- [K in keyof S as string extends K ? RootId : K] renames the index key while the value can still branch on the original K, and ? modifiers from S are preserved
+  trigger: when renaming an index-signature key in a mapped type with an as clause
+  kind: pattern
+  cause: a mapped type over keyof S with an as clause stays homomorphic for modifiers; the value expression sees the pre-rename key
+  resolution: reuse EntryAt unchanged for the value and only swap the key type, so no duplicate value logic is needed
+  artifact: type LayeredShape<S, T, Required extends string>
+  signal: silent
+- the intersection refuses $layer: 'project' because TypeScript checks the named $layer property against the root index signature too
+  trigger: when adding $layer beside a keyed-map root via ConfigEntry<T> & { $layer?: string }
+  kind: gotcha
+  cause: object-literal properties are related to every applicable string index signature of the target, named target properties included
+  resolution: build one mapped type and rename the string index key to a template-literal key set that excludes a leading $
+  artifact: is not assignable to type 'LayeredEntry<Steps>'
+  signal: loud
 - the type refuses empty, non-ASCII-first and non-reserved $-prefixed step ids, which the runtime (FLOW_RESERVED in build/flatten/normalise) still treats as step ids
   trigger: when comparing the typed step-id set with what resolveGraph accepts at run time
   kind: gotcha
