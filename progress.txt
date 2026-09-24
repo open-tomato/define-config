@@ -1,3 +1,17 @@
+- the schema accepts versioning-strategy on a bun entry, so only the ecosystem check catches it
+  trigger: when relying on the schemastore dependabot schema to vet bun options
+  kind: gotcha
+  cause: schemastore does not encode per-ecosystem support
+  resolution: run the bun -e ecosystem check as well as the schema check
+  artifact: restricted bun options: versioning-strategy
+  signal: silent
+- a sed on the `directory: /` line matches every update entry, so the option lands on github-actions too
+  trigger: when planting a key on the bun entry of a copied dependabot.yml with sed
+  kind: gotcha
+  cause: both entries have an identical directory line
+  resolution: target the bun entry by line number
+  artifact: versioning-strategy: increase
+  signal: silent
 - bun run lint passes regardless of YAML content
   trigger: when adding YAML under .github
   kind: gotcha
