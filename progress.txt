@@ -1,3 +1,10 @@
+- console.log output formatting in README examples matches Bun output with double quotes in arrays
+  trigger: when adding documentation code examples
+  kind: pattern
+  cause: Bun's console.log stringifies with double quotes, not single
+  resolution: wrapped comments match the actual runtime output exactly
+  artifact: // { before: [ "build.format" ], after: [] }
+  signal: silent
 - reachable lists the hook node after the hooked node, not before it
   trigger: when asserting reachable() order for a flow with a before hook
   kind: gotcha
