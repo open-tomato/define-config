@@ -16,6 +16,10 @@
  * with `import()` at run time rather than a static import: lint runs over
  * source before any build and cannot resolve it. When it is missing the
  * script exits 1 saying so, instead of failing inside Node's resolver.
+ *
+ * It also exits 1 when it runs under bun. With no Node installed,
+ * `bun run check-node` finds bun's `node` shim and would run this check on
+ * bun, passing a Node leg that never ran on Node.
  */
 
 import { existsSync } from 'node:fs';
@@ -24,6 +28,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const ENTRY = new URL('../dist/index.js', import.meta.url);
+
+if (process.versions.bun !== undefined) {
+  process.stderr.write(
+    'reload-node: running under bun, not Node: `bun run` puts a node shim on PATH when no Node is installed; install Node\n',
+  );
+  process.exit(1);
+}
 
 if (!existsSync(ENTRY)) {
   process.stderr.write('reload-node: dist/index.js is missing; run `bun run build` first\n');

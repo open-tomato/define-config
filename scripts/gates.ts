@@ -41,12 +41,45 @@ export interface RunGatesOptions {
   readonly distDir: string;
   /** Environment passed to each gate; its `CI` decides a missing `node`. */
   readonly env: Readonly<Record<string, string | undefined>>;
-  /** Returns the path of `node`, or `null` when none is on `PATH`. */
+  /**
+   * Returns the path of a real Node.js, or `null` when there is none; see
+   * {@link findRealNode}.
+   */
   readonly findNode: () => string | null;
   /** Receives each report line, without a trailing newline. */
   readonly writeLine: (line: string) => void;
   /** Working directory for each gate; defaults to the current one. */
   readonly cwd?: string;
+}
+
+/** Script the `node` candidate runs: exit 0 under Node, 1 under bun. */
+const IS_NODE_PROBE = 'process.exit(process.versions.bun === undefined ? 0 : 1)';
+
+/**
+ * The path of a real Node.js on `PATH`, or `null` when there is none.
+ *
+ * A lookup by name is not enough: when no Node is installed, `bun run`
+ * puts a `node` on `PATH` that is a link to bun, so under `bun run gates`
+ * `which('node')` always finds one. The candidate is run and asked whether
+ * it is bun; bun, or a `node` that cannot be run, counts as none.
+ *
+ * @param which - Resolves a command name to a path, or `null`.
+ * @returns The candidate's path when it runs as Node, else `null`.
+ */
+export function findRealNode(which: (name: string) => string | null = Bun.which): string | null {
+  const candidate = which('node');
+  if (candidate === null) {
+    return null;
+  }
+  try {
+    const probe = Bun.spawnSync([candidate, '-e', IS_NODE_PROBE], { stdin: 'ignore', stdout: 'ignore', stderr: 'ignore' });
+    return probe.exitCode === 0
+      ? candidate
+      : null;
+  } catch {
+    // Spawning fails when the file is not executable: no usable Node.
+    return null;
+  }
 }
 
 /** Exit code returned when `check-node` fails for want of `node` under CI. */
@@ -107,7 +140,7 @@ if (import.meta.main) {
     gates: GATES,
     distDir: 'dist',
     env: process.env,
-    findNode: () => Bun.which('node'),
+    findNode: () => findRealNode(),
     writeLine: (line) => process.stdout.write(`${line}\n`),
   }));
 }

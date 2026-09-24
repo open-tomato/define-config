@@ -1,12 +1,12 @@
 import type { Gate, RunGatesOptions } from './gates';
 
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
-import { CHECK_NODE_SKIPPED, GATES, runGates } from './gates';
+import { CHECK_NODE_SKIPPED, findRealNode, GATES, runGates } from './gates';
 
 let dir: string;
 
@@ -167,5 +167,39 @@ describe('runGates', () => {
     expect(result).toBe(0);
     expect(lines.map((line) => line.split(':')[0])).toEqual(['a', 'b', 'check-node']);
     expect(lines.every((line) => / exit 0 \(\d+\.\d{2}s\)$/.test(line))).toBe(true);
+  });
+});
+
+describe('findRealNode', () => {
+  test('returns null when no node is on PATH', () => {
+    expect(findRealNode(() => null)).toBeNull();
+  });
+
+  test('returns null for a node that is bun, as bun run\'s node shim is', () => {
+    // Arrange: `bun run` links a `node` to bun when no Node is installed.
+    const shim = join(dir, 'node');
+    symlinkSync(process.execPath, shim);
+
+    // Act / Assert
+    expect(findRealNode(() => shim)).toBeNull();
+  });
+
+  test('returns the path of a node that is not bun (control)', () => {
+    // Arrange: a stand-in that answers the probe the way Node does.
+    const node = join(dir, 'node');
+    writeFileSync(node, '#!/bin/sh\nexit 0\n');
+    chmodSync(node, 0o755);
+
+    // Act / Assert
+    expect(findRealNode(() => node)).toBe(node);
+  });
+
+  test('returns null for a node that cannot be run', () => {
+    // Arrange: a file named node without the execute bit.
+    const node = join(dir, 'node');
+    writeFileSync(node, '#!/bin/sh\nexit 0\n');
+
+    // Act / Assert
+    expect(findRealNode(() => node)).toBeNull();
   });
 });
