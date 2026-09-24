@@ -1,3 +1,10 @@
+- unquoted $c expands to one word so zsh looks for a command named 'bun run lint'
+  trigger: when looping over gate commands stored as strings in zsh
+  kind: gotcha
+  cause: zsh does not word-split unquoted variables
+  resolution: use eval "$c" in the loop
+  artifact: (eval):1: command not found: bun run lint
+  signal: loud
 - `bun $g` with g='run lint' ran as one argument and reported a missing script
   trigger: when looping over multi-word gate commands in a zsh for-loop
   kind: gotcha
