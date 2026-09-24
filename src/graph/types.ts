@@ -73,9 +73,37 @@ export type StepEntry<Outcomes extends string = string, Ids extends string = str
 };
 
 /**
+ * The characters a step id may start with in a typed {@link FlowEntry}:
+ * every printable ASCII character except `$`.
+ */
+type StepIdHeads = ' !"#%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~';
+
+/** Splits string `S` into the union of its characters. */
+type Chars<S extends string, Acc extends string = never> = S extends `${infer C}${infer Rest}`
+  ? Chars<Rest, Acc | C>
+  : Acc;
+
+/**
+ * The key set of the step ids of a {@link FlowEntry}: every string whose
+ * first character is a printable ASCII character other than `$`. Leaving
+ * `$` out keeps `$start` and `$unattended` from being checked against the
+ * step entries' index signature, which would refuse their string and
+ * boolean values.
+ */
+type StepId = `${Chars<StepIdHeads>}${string}`;
+
+/**
  * One flow: its step entries keyed by step id, plus the flow's reserved
- * keys. Because `$start` and `$unattended` share the object with the step
- * ids, the value at a step id is typed to admit a string or a boolean too.
+ * keys `$start` and `$unattended`. The value at a step id is a step entry
+ * only: a string or a boolean there is a type error.
+ *
+ * Step ids are typed as the strings that start with a printable ASCII
+ * character other than `$`, so any other `$`-prefixed key, such as a
+ * misspelt `$strat`, is a type error too. A step id that is empty or starts
+ * with a non-ASCII character is refused by the type as well, though
+ * `resolveGraph` accepts it at run time. Reading a step entry back with a
+ * key typed only as `string` is a type error for the same reason; narrow
+ * the key to a step id first.
  *
  * @typeParam Outcomes - The outcome names the flow's steps can end in.
  * @typeParam Ids - The step ids `$start` and `when` may name.
@@ -86,7 +114,7 @@ export type FlowEntry<Outcomes extends string = string, Ids extends string = str
   /** `true` marks a flow that runs without user input. */
   $unattended?: boolean;
   /** A step entry, keyed by its step id. */
-  [id: string]: StepEntry<Outcomes, Ids> | string | boolean | undefined;
+  [id: StepId]: StepEntry<Outcomes, Ids>;
 };
 
 /**

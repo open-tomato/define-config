@@ -1,3 +1,17 @@
+- The declared onChoice property overrides the [option: string]: unknown index signature, so onChoice: 'x' is rejected; the old type made the directive unused
+  trigger: when adding @ts-expect-error for a retyped field that sits beside an index signature of unknown
+  kind: pattern
+  cause: a named property's own type takes precedence over the index signature
+  resolution: check it by putting the old type back and reading tsc: TS2578 on the directive proves it now tests the change
+  artifact: error TS2578: Unused '@ts-expect-error' directive.
+  signal: silent
+- The README sugar table and the normalise.ts TSDoc already described onChoice as a map; only the type and its own TSDoc were wrong
+  trigger: when checking README and TSDoc for text that restates the onChoice type
+  kind: location
+  cause: the 0.1.0 type was out of step with both the runtime and the prose
+  resolution: only types.ts and types.test.ts needed edits
+  artifact: onChoice: { <name>: id, … }
+  signal: silent
 - progress.txt was already modified (emptied) in the working tree before the task began
   trigger: when the session starts
   kind: location

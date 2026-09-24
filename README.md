@@ -117,6 +117,11 @@ Resolve the merged `flows` section into a step graph and report every problem in
 produces a `flows` section where flows are keyed by flow name, each containing step entries keyed
 by step id.
 
+A flow typed as `Flows` takes a step entry object at each step id: a step id set to a string or a
+boolean is a type error. `$start` and `$unattended` are the flow's only `$`-prefixed keys; step ids
+are typed as strings that start with a printable ASCII character other than `$`, so a misspelt
+`$strat` is a type error too.
+
 | Sugar | Equivalent |
 |-------|------------|
 | `onTrue: id` | `on: { true: id }` |

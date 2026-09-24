@@ -88,6 +88,31 @@ describe('FlowEntry and Flows', () => {
     const good: FlowEntry<Outcomes, 'build'> = { $start: 'build', $unattended: true, build: {} };
     expect<unknown[]>([bad.$start, good.$start]).toEqual(['lint', 'build']);
   });
+
+  test('accepts $start and $unattended beside a step entry with the default type arguments', () => {
+    const flow: FlowEntry = { $start: 'build', $unattended: true, build: {} };
+    const flows: Flows = { main: { $start: 'build', $unattended: true, build: {} } };
+    expect<unknown[]>([flow, flows.main]).toEqual([
+      { $start: 'build', $unattended: true, build: {} },
+      { $start: 'build', $unattended: true, build: {} },
+    ]);
+  });
+
+  test('refuses a step id set to a string or a boolean', () => {
+    // @ts-expect-error a step id takes a step entry, not a string
+    const worded: FlowEntry = { $start: 'build', build: 'deploy' };
+    // @ts-expect-error a step id takes a step entry, not a boolean
+    const flagged: FlowEntry = { $start: 'build', build: true };
+    // @ts-expect-error a step id takes a step entry, not a string, inside Flows too
+    const nested: Flows = { main: { build: {}, deploy: 'build' } };
+    expect<unknown[]>([worded.build, flagged.build, Object.keys(nested)]).toEqual(['deploy', true, ['main']]);
+  });
+
+  test('refuses a $-prefixed key that is not $start or $unattended', () => {
+    // @ts-expect-error `$strat` is neither a reserved key nor a step id
+    const typo: FlowEntry = { $strat: 'build', build: {} };
+    expect(Object.keys(typo)).toEqual(['$strat', 'build']);
+  });
 });
 
 describe('StepRegistry and Graph', () => {
