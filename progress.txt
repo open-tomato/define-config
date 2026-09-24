@@ -1,3 +1,24 @@
+- actions/setup-node v4 tops out at v4.4.0 (2025-04-14) while v7.0.0 exists; actions/checkout has v7.0.1
+  trigger: when reviewing the pinned action majors
+  kind: location
+  cause: the plan says to stay in the major the file already uses
+  resolution: left on v4; moving to a newer major is a separate decision
+  artifact: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+  signal: silent
+- uvx check-jsonschema --builtin-schema vendor.github-workflows validates the workflow file, and a copy with timeout-minutes: fifteen exits 1 as the control
+  trigger: when validating a GitHub workflow without adding a dev dependency
+  kind: pattern
+  cause: YAML is not covered by the repo's lint gate
+  resolution: run the schema check plus a broken-copy control; actionlint is not available through uvx
+  artifact: ok -- validation done
+  signal: silent
+- the releases API lists by creation date, so the first few entries mix majors and a newer v4 patch can sit below v7/v6 entries
+  trigger: when choosing the latest release in a major for GitHub Actions
+  kind: gotcha
+  cause: backport releases such as checkout v4.4.0 (2026-07) are published after newer majors
+  resolution: list refs/tags/<major>.* with git ls-remote and sort -V, then cross-check the SHA with gh api repos/<repo>/commits/<tag>
+  artifact: git ls-remote --tags https://github.com/actions/checkout.git refs/tags/v4.*
+  signal: silent
 - the schema accepts versioning-strategy on a bun entry, so only the ecosystem check catches it
   trigger: when relying on the schemastore dependabot schema to vet bun options
   kind: gotcha

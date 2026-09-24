@@ -10,6 +10,8 @@ Validates with Standard Schema and is dependency-free.
 npm install @open-tomato/define-config
 ```
 
+The package requires Node.js 22 or later (`engines.node` is `>=22`).
+
 ## defineConfig
 
 Declare a list of config entries for a config of type `T`. At runtime this is the identity: it
