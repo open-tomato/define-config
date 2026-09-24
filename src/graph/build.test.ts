@@ -250,7 +250,7 @@ describe('unknown-step', () => {
     // Assert
     expect(where(result)).toEqual(['unknown-step flows.main.deploy']);
     expect(result.graph.edges).toEqual([{ from: 'main.deploy', outcome: 'done', to: 'main.build', repeat: false }]);
-    expect(result.hooks).toEqual([{ flow: 'main', node: 'main.deploy', anchor: 'main.build', position: 'after' }]);
+    expect(result.graph.hooks).toEqual([{ flow: 'main', node: 'main.deploy', anchor: 'main.build', position: 'after' }]);
   });
 
   test('a non-string step is unknown even when the entry id is a registered step', () => {
@@ -317,20 +317,20 @@ describe('impure-when and hooks', () => {
   test('a when on a pure step is accepted and becomes a hook, not an edge (control)', () => {
     const result = run({ next: { build: {}, lint: { when: 'before:build' } } });
     expect(result.diagnostics).toEqual([]);
-    expect(result.hooks).toEqual([{ flow: 'next', node: 'next.lint', anchor: 'next.build', position: 'before' }]);
+    expect(result.graph.hooks).toEqual([{ flow: 'next', node: 'next.lint', anchor: 'next.build', position: 'before' }]);
     expect(result.graph.edges).toEqual([]);
   });
 
   test('a when anchor that exists nowhere is unknown-step at when', () => {
     const result = run({ next: { lint: { when: 'after:deploy' } } });
     expect(where(result)).toEqual(['unknown-step flows.next.lint.when']);
-    expect(result.hooks).toEqual([]);
+    expect(result.graph.hooks).toEqual([]);
   });
 
   test('a when anchor naming a registered step with no entry makes an implicit node', () => {
-    const { hooks, sources, diagnostics } = run({ next: { lint: { when: 'after:build' } } });
+    const { graph, sources, diagnostics } = run({ next: { lint: { when: 'after:build' } } });
     expect(diagnostics).toEqual([]);
-    expect(hooks).toEqual([{ flow: 'next', node: 'next.lint', anchor: 'next.build', position: 'after' }]);
+    expect(graph.hooks).toEqual([{ flow: 'next', node: 'next.lint', anchor: 'next.build', position: 'after' }]);
     expect(sources['next.build']).toEqual({ path: ['flows', 'next', 'lint', 'when'], implicit: true });
   });
 
@@ -342,7 +342,7 @@ describe('impure-when and hooks', () => {
   test('a when of another shape is still impure-when but builds no hook', () => {
     const result = run({ next: { build: {}, test: { when: 'during:build' }, lint: { when: 7 } } });
     expect(where(result)).toEqual(['impure-when flows.next.test.when']);
-    expect(result.hooks).toEqual([]);
+    expect(result.graph.hooks).toEqual([]);
   });
 
   test('a when inside an inline entry is reported where the host wrote it', () => {

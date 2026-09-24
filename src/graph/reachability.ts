@@ -35,7 +35,7 @@ import type { FlowSummary, GraphNode } from './types';
 import { error, warn } from '../diagnostics';
 
 /** The nodes one step of the walk leads to from each node: edge targets and hooked nodes. */
-function successors(built: Pick<BuildResult, 'graph' | 'hooks'>): Map<string, string[]> {
+function successors(built: Pick<BuildResult, 'graph'>): Map<string, string[]> {
   const out = new Map<string, string[]>();
   const link = (from: string, to: string): void => {
     const list = out.get(from);
@@ -48,7 +48,7 @@ function successors(built: Pick<BuildResult, 'graph' | 'hooks'>): Map<string, st
   for (const edge of built.graph.edges) {
     link(edge.from, edge.to);
   }
-  for (const hook of built.hooks) {
+  for (const hook of built.graph.hooks) {
     link(hook.anchor, hook.node);
   }
   return out;
@@ -107,12 +107,12 @@ function check(
  * Report every step entry no flow start reaches, and every interactive step
  * an `$unattended` flow reaches.
  *
- * @param built - What `build` returned; its `graph`, `sources` and `hooks`
- * are read.
+ * @param built - What `build` returned; its `graph`, hooks included, and
+ * its `sources` are read.
  * @returns The `unreachable` warnings and `interactive-unattended` errors,
  * flow by flow in node order, each at a path rooted at `flows`.
  */
-export function reachability(built: Pick<BuildResult, 'graph' | 'sources' | 'hooks'>): readonly Diagnostic[] {
+export function reachability(built: Pick<BuildResult, 'graph' | 'sources'>): readonly Diagnostic[] {
   const next = successors(built);
   return Object.values(built.graph.flows).flatMap((flow) => {
     if (flow.start === '') {

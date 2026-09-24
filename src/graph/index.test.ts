@@ -27,11 +27,11 @@ describe('resolveGraph over an empty flows map', () => {
     const result = resolveGraph(flows, registry);
 
     // Assert
-    expect(result).toEqual({ graph: { nodes: {}, edges: [], flows: {} }, diagnostics: [] });
+    expect(result).toEqual({ graph: { nodes: {}, edges: [], hooks: [], flows: {} }, diagnostics: [] });
   });
 
   test('gives an empty graph with an empty registry too', () => {
-    expect(resolveGraph({}, {})).toEqual({ graph: { nodes: {}, edges: [], flows: {} }, diagnostics: [] });
+    expect(resolveGraph({}, {})).toEqual({ graph: { nodes: {}, edges: [], hooks: [], flows: {} }, diagnostics: [] });
   });
 });
 

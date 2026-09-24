@@ -178,7 +178,7 @@ describe('paths and hooks', () => {
     const result = built({ next: { test: { on: { success: 'lint' } }, lint: { when: 'before:test' } } });
 
     // Act / Assert
-    expect(result.hooks).toHaveLength(1);
+    expect(result.graph.hooks).toHaveLength(1);
     expect(cycles(result)).toEqual([]);
   });
 

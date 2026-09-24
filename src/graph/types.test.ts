@@ -135,6 +135,7 @@ describe('StepRegistry and Graph', () => {
         },
       },
       edges: [{ from: 'main.build', to: 'main.build', outcome: 'fail', repeat: 2 }],
+      hooks: [],
       flows: { main: { name: 'main', start: 'main.build', unattended: false, nodes: ['main.build'] } },
     };
 

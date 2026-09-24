@@ -123,7 +123,7 @@ describe('unreachable', () => {
 describe('when: hooks', () => {
   test('a hook is reachable when its anchor is', () => {
     const result = built({ next: { build: { on: { success: 'test' } }, test: {}, lint: { when: 'before:test' } } });
-    expect(result.hooks).toHaveLength(1);
+    expect(result.graph.hooks).toHaveLength(1);
     expect(reachability(result)).toEqual([]);
   });
 
