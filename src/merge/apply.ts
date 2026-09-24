@@ -26,8 +26,9 @@
  * @module
  */
 
-/** A plain object: the only kind of value the merge descends into. */
-type PlainObject = Readonly<Record<string, unknown>>;
+import type { PlainObject } from './plain-object';
+
+import { isPlainObject } from './plain-object';
 
 /**
  * How an entry touched a key path:
@@ -94,15 +95,6 @@ export function pathKey(path: readonly string[]): string {
  */
 export function initialState(): MergeState {
   return { value: {}, provenance: new Map() };
-}
-
-/** `true` for an object whose prototype is `Object.prototype` or `null`. */
-function isPlainObject(value: unknown): value is PlainObject {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-  const prototype: unknown = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
 }
 
 /**

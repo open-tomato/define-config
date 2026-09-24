@@ -51,6 +51,7 @@ import type { FlattenResult } from './flatten';
 import type { FlowSummary, Graph, GraphEdge, GraphNode, StepRegistry } from './types';
 
 import { error, pathToString } from '../diagnostics';
+import { isPlainObject } from '../merge/plain-object';
 
 /** Where a node came from: the path it was written at, and whether it is implicit. */
 export interface NodeSource {
@@ -118,15 +119,6 @@ interface FlowState {
   readonly edges: GraphEdge[];
   readonly hooks: GraphHook[];
   readonly diagnostics: Diagnostic[];
-}
-
-/** `true` for an object whose prototype is `Object.prototype` or `null`. */
-function isPlainObject(value: unknown): value is Readonly<Record<string, unknown>> {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-  const prototype: unknown = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
 }
 
 /**

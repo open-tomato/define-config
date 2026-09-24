@@ -28,6 +28,7 @@
 import type { Diagnostic } from '../diagnostics';
 
 import { error } from '../diagnostics';
+import { isPlainObject } from '../merge/plain-object';
 
 /** The sugar keys naming a fixed outcome, and the outcome each names. */
 const FIXED_SUGAR: Readonly<Record<string, string>> = {
@@ -59,15 +60,6 @@ interface SourcedHandler {
   readonly outcome: string;
   readonly value: unknown;
   readonly source: readonly string[];
-}
-
-/** `true` for an object whose prototype is `Object.prototype` or `null`. */
-function isPlainObject(value: unknown): value is Readonly<Record<string, unknown>> {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-  const prototype: unknown = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
 }
 
 /** `true` when `key` is present on `entry` with a value that is not `undefined`. */

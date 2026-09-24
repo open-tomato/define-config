@@ -39,6 +39,7 @@
 import type { Diagnostic } from '../diagnostics';
 
 import { error } from '../diagnostics';
+import { isPlainObject } from '../merge/plain-object';
 
 /** An edge object after flattening: the id it goes to and its `repeat`. */
 export interface FlatEdge {
@@ -83,15 +84,6 @@ interface FlowState {
   /** Every id taken so far: the flow's own ids and each generated id kept. */
   readonly taken: Set<string>;
   readonly diagnostics: Diagnostic[];
-}
-
-/** `true` for an object whose prototype is `Object.prototype` or `null`. */
-function isPlainObject(value: unknown): value is Readonly<Record<string, unknown>> {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-  const prototype: unknown = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
 }
 
 /** `true` for a handler value that is an inline entry. */
