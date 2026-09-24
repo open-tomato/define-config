@@ -216,6 +216,33 @@ console.log(looped.graph.edges);
 // [{ from: 'retry.attempt', outcome: 'fail', to: 'retry.attempt', repeat: true }]
 ```
 
+A `when:` placement creates a hook in `result.graph.hooks`: it positions one step before or
+after another without an edge. The hook's node runs before or after its anchor, then the flow
+continues from the anchor; a hook is not followed by outcome.
+
+```ts
+import { resolveGraph } from '@open-tomato/define-config';
+
+const result = resolveGraph(
+  {
+    next: {
+      $start: 'build',
+      build: { onSuccess: 'test' },
+      lint: { when: 'before:test' },
+      test: {},
+    },
+  },
+  {
+    build: { outcomes: ['success', 'fail'] },
+    lint: { outcomes: ['success'], pure: true },
+    test: { outcomes: ['success', 'fail'] },
+  },
+);
+
+console.log(result.graph.hooks);
+// [{ flow: 'next', node: 'next.lint', anchor: 'next.test', position: 'before' }]
+```
+
 ## createLoader
 
 Find, read, merge, validate and resolve the config files of each layer. For each layer, in order

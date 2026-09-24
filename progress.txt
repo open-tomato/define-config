@@ -1,3 +1,10 @@
+- type imports from parent and sibling form one import group; a blank line between them is rejected
+  trigger: adding a parent-path import type above an existing sibling import type block
+  kind: gotcha
+  cause: import/order puts all type imports in a single group ahead of builtin/external
+  resolution: place the parent import type directly above the sibling import type with no blank line
+  artifact: There should be no empty line within import group
+  signal: loud
 - the hooked entry is also reported as unreachable, so the diagnostics are unknown-step plus unreachable, not unknown-step alone
   trigger: when asserting diagnostics for a flow whose hooked step is an explicit entry with an unresolved when: anchor
   kind: gotcha
