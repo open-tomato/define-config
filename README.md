@@ -1,7 +1,8 @@
 # define-config
 
-Typed config arrays with id-keyed merge, `$replace`, Standard Schema validation and outcome-typed
-step graphs. Dependency-free.
+Typed config arrays with id-keyed merge and outcome-typed step graphs.
+Merges entries recursively with `$replace` and `$layer` support, and resolves flows.
+Validates with Standard Schema and is dependency-free.
 
 ## Install
 

@@ -1,3 +1,31 @@
+- AGENTS.md has a ts fence (the TDD template) that the processor also lints, not only README.md
+  trigger: when enabling fence linting over **/*.md
+  kind: location
+  cause: the processor applies to every .md file ESLint visits
+  resolution: rewrote the template as a runnable merge test
+  artifact: 'myFunction' is not defined
+  signal: loud
+- import/order puts @open-tomato/define-config in a different group depending on whether dist/ exists, and import/no-unresolved fails without dist/
+  trigger: when linting README fences that import the package's own name with dist/ absent
+  kind: gotcha
+  cause: the typescript resolver resolves the self-reference through package.json exports to dist/index.d.ts only after a build
+  resolution: in **/*.md/* children, ignore the specifier in import/no-unresolved and set import/internal-regex to it
+  artifact: Unable to resolve path to module '@open-tomato/define-config'
+  signal: loud
+- splitting the objects does not bring the Markdown structure rules back
+  trigger: when moving the markdown/markdown processor into its own **/*.md config object beside markdown/recommended
+  kind: gotcha
+  cause: flat config merges every object that matches README.md, so the processor still applies to the file
+  resolution: use the wrapping processor, not a split
+  artifact: processor: 'markdown/markdown'
+  signal: silent
+- markdown/recommended rules stop reporting on the .md file itself, and lint still exits 0 on Markdown structure errors
+  trigger: when adding processor: 'markdown/markdown' to the **/*.md object that extends markdown/recommended
+  kind: gotcha
+  cause: the @eslint/markdown 8.0.3 preprocess returns only fenced-block objects and never the whole text, so ESLint lints only the virtual children
+  resolution: wrap the processor: preprocess returns [text, ...blocks] and postprocess passes the first message list through unchanged; ESLint lints a string block with the file's own markdown language config
+  artifact: markdown/no-empty-links
+  signal: silent
 - A planted dist file is wiped before check-pack sees it, so check-pack exits 0 and looks clean
   trigger: when planting a stray file under dist/ to test check-pack
   kind: gotcha
