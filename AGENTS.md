@@ -101,7 +101,7 @@ during development, `bun run <gate>` stays available to run a single gate.
 
 ## Reserved Keys in Config Objects
 
-The library recognizes these keys with special semantics. See [README.md#merge](README.md#merge) for the full rules.
+The library recognizes these keys with special semantics. Merge-time keys control how entries combine; flow-time keys structure step graphs. See [README.md#merge](README.md#merge) and [README.md#resolveGraph](README.md#resolveGraph) for the full rules.
 
 ### Merge-time keys
 - **`$replace: true`** — Inside a keyed map, replaces that entire subtree with the new value. On the entry itself,
@@ -115,9 +115,22 @@ The library recognizes these keys with special semantics. See [README.md#merge](
   Source: `src/merge/apply.ts`
 
 ### Flow-time keys (in step graphs)
-- **`$start`** — Names the entry step (the first step a flow executes); every flow has exactly one.
-- **`$unattended: true`** — On a flow root, marks it as unattended (can run without user input; default is attended).
-- **All other keys** — Define step entries and their wiring (target step names, data payloads, etc.).
+- **`$start`** — Optional; names the entry step (the first step a flow executes). A flow without it starts at its first step entry. A `$start` naming no entry is `unknown-step`. Source: `src/graph/build.ts`
+- **`$unattended: true`** — On a flow root, marks it as unattended (can run without user input; default is attended). Source: `src/graph/build.ts`
+- **Step ids** — Every key not reserved (all keys except `$start` and `$unattended`). Define step entries keyed by step id; each entry is a plain object. Source: `src/graph/build.ts`
+
+### Step entry keys
+- **`step`** — Optional string; the name of the registered step this entry runs. Defaults to the entry's id when absent. Source: `src/graph/build.ts`
+- **`on`** — Optional plain object; a map of outcome names to handlers (step ids or `{ to, repeat }` edge objects). Source: `src/graph/build.ts`
+- **`onTrue`** — Sugar for `on: { true: handler }`. Folds into `on` during normalization. Source: `src/graph/normalise.ts`
+- **`onFalse`** — Sugar for `on: { false: handler }`. Folds into `on` during normalization. Source: `src/graph/normalise.ts`
+- **`onSuccess`** — Sugar for `on: { success: handler }`. Folds into `on` during normalization. Source: `src/graph/normalise.ts`
+- **`onFail`** — Sugar for `on: { fail: handler }`. Folds into `on` during normalization. Source: `src/graph/normalise.ts`
+- **`onChoice`** — Sugar for a map of outcome names to handlers; each key becomes an outcome in `on`. Folds into `on` during normalization. Source: `src/graph/normalise.ts`
+- **`when`** — Optional string; a placement hook of the form `before:<id>` or `after:<id>` that positions this step relative to another without an edge. Source: `src/graph/build.ts`
+- **`expect`** — Optional string; the expected outcome for this entry. Validates that the step declares this outcome. Source: `src/graph/build.ts`
+
+See [README.md#resolveGraph](README.md#resolveGraph) for the full rules and examples.
 
 ## Test Coverage & TDD
 
