@@ -1,6 +1,6 @@
 {
   "name": "@open-tomato/define-config",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Typed config arrays with id-keyed merge and outcome-typed step graphs. Merges with $replace and $layer support, validates with Standard Schema. Dependency-free.",
   "private": false,
   "publishConfig": {
