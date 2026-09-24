@@ -101,12 +101,18 @@ during development, `bun run <gate>` stays available to run a single gate.
 
 ## Reserved Keys in Config Objects
 
-The library recognizes these keys with special semantics:
+The library recognizes these keys with special semantics. See [README.md#merge](README.md#merge) for the full rules.
 
 ### Merge-time keys
-- **`$replace: true`** — Inside a keyed map, replaces that entire subtree with the new value, ignoring defaults beneath it.
-- **`<key>: false`** — At a map entry, marks that key for removal (deletes it from the merged result).
-- **`$layer`** — On a top-level entry, labels its layer (metadata, not processed by the merge engine; visible in diagnostics).
+- **`$replace: true`** — Inside a keyed map, replaces that entire subtree with the new value. On the entry itself,
+  replaces the whole value merged so far. Only the form `{ $replace: true }` replaces; any other value for the key
+  is a type error (caught at compile time by `defineConfig`). Source: `src/merge/apply.ts`
+- **`<key>: false`** — Removes the key from the merged result. A map entry set to `false` yields a `remove` provenance
+  record. Removing a key the host lists in `required` yields a `required-dropped` error. Source: `src/merge/apply.ts`
+- **`$layer`** — On a top-level entry only, labels its layer for duplicate detection and provenance tracking. Must be
+  a string; any other type throws `TypeError`. The value is recorded on each `ProvenanceRecord.layer` but never in
+  the merged value. Each entry's `$layer` is set per source by the loader, overriding any `$layer` the file wrote.
+  Source: `src/merge/apply.ts`
 
 ### Flow-time keys (in step graphs)
 - **`$start`** — Names the entry step (the first step a flow executes); every flow has exactly one.
