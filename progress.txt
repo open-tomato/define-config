@@ -1,3 +1,10 @@
+- zsh does not word-split unquoted variables, so each gate command failed as a single word
+  trigger: when looping over gate commands stored in a zsh string variable
+  kind: gotcha
+  cause: for c in "bun run lint" ...; $c treats the whole string as one command name in zsh
+  resolution: run each gate as its own literal command
+  artifact: (eval):1: command not found: bun run lint
+  signal: loud
 - example successfully demonstrates reload behavior with three distinct load scenarios
   trigger: created and tested TypeScript example
   kind: pattern
