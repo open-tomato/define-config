@@ -16,7 +16,9 @@
  *   read a resolved graph: an outcome's target, a node's hooks, the nodes
  *   reached from a flow's start, and the order a flow's nodes are placed in;
  * - {@link createLoader} finds, reads, merges, validates and resolves the
- *   config files of each layer.
+ *   config files of each layer;
+ * - {@link canonicalize} and {@link digest} write a value as canonical JSON
+ *   text and as the `sha256:` digest of that text.
  *
  * @packageDocumentation
  */
@@ -38,6 +40,8 @@ export type { Provenance, ProvenanceKind, ProvenanceRecord } from './merge/apply
 export type { StandardSchemaV1 } from './standard-schema';
 export type { ConfigEntry, LayeredEntry } from './types';
 
+export { canonicalize, CanonicalizeError } from './digest/canonicalize';
+export { digest } from './digest/digest';
 export { defineConfig } from './define-config';
 export { resolveGraph } from './graph';
 export { hooksOf, next, reachable, walkOrder } from './graph/walk';

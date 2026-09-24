@@ -1,3 +1,17 @@
+- the default import fc triggers import/no-named-as-default-member warnings
+  trigger: when importing fast-check in this repo
+  kind: pattern
+  cause: eslint import plugin flags fc.assert and similar member access
+  resolution: use named imports: import { assert, jsonValue, property } from 'fast-check'
+  artifact: import/no-named-as-default-member
+  signal: loud
+- jsonValue can produce an object whose only key is $date, $map, $set or $function, which canonicalize refuses as not-canonical
+  trigger: when generating values with fc.jsonValue() for canonicalize properties
+  kind: gotcha
+  cause: the tag-imitation refusal applies to any plain object with a lone tag key
+  resolution: filter generated values with a recursive check for lone tag-key objects
+  artifact: not-canonical
+  signal: loud
 - tsc -p tsconfig.build.json emits dist/digest/canonicalize.d.ts even though index.ts does not export it yet
   trigger: when running bun run build after adding an unexported src module
   kind: location

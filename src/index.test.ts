@@ -12,8 +12,11 @@ const BUILD_TIMEOUT_MS = 120_000;
 
 /** The functions the package exports, and nothing else at runtime. */
 const FUNCTIONS = [
+  'CanonicalizeError',
+  'canonicalize',
   'createLoader',
   'defineConfig',
+  'digest',
   'hooksOf',
   'merge',
   'next',
@@ -137,7 +140,7 @@ describe('dist/index.d.ts', () => {
       const file = declarationFile(clause.from);
       const text = readFileSync(file, 'utf8');
       for (const name of clause.names) {
-        const declaration = new RegExp(`^export (?:declare )?(?:interface|type|function|namespace) ${name}\\b`, 'm');
+        const declaration = new RegExp(`^export (?:declare )?(?:interface|type|function|class|namespace) ${name}\\b`, 'm');
         expect({ file, name, declared: declaration.test(text) })
           .toEqual({ file, name, declared: true });
       }
