@@ -1,0 +1,57 @@
+# Dependabot version updates.
+#
+# bun itself (the `packageManager` field in package.json, which CI reads
+# through `bun-version-file`) is out of Dependabot's reach: no ecosystem
+# updates it. Bump it by hand.
+#
+# The `bun` ecosystem groups by `patterns` and `update-types` only. Each
+# group takes minor and patch updates, so a major update arrives as its own
+# pull request, one package at a time.
+version: 2
+updates:
+  - package-ecosystem: bun
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
+    labels:
+      - dependencies
+    groups:
+      lint-and-types:
+        patterns:
+          - 'eslint*'
+          - '@eslint/*'
+          - '@stylistic/*'
+          - typescript
+          - typescript-eslint
+          - '@typescript-eslint/*'
+          - '@types/*'
+          - globals
+          - jsonc-eslint-parser
+          - 'eslint-*'
+        update-types:
+          - minor
+          - patch
+      test:
+        patterns:
+          - fast-check
+          - zod
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
+    labels:
+      - dependencies
+    groups:
+      actions:
+        patterns:
+          - '*'
