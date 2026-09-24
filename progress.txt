@@ -1,3 +1,17 @@
+- BSD sed -i rejects the edit and leaves the file unchanged
+  trigger: when running sed -i with a pattern containing quotes on macOS
+  kind: gotcha
+  cause: BSD sed needs a backup-suffix argument and different quoting
+  resolution: use perl -pi -e or the Edit tool
+  artifact: unterminated substitute pattern
+  signal: loud
+- Diagnostic uses the field level, not severity
+  trigger: when filtering LoadResult diagnostics by error severity in a test
+  kind: gotcha
+  cause: the interface declares level: DiagnosticLevel
+  resolution: filter with d.level === 'error'
+  artifact: Property 'severity' does not exist on type 'Diagnostic'
+  signal: loud
 - The dist/index.d.ts declaration test only matched interface, type, function and namespace, so it reported an exported class as undeclared
   trigger: when exporting a class from src/index.ts
   kind: gotcha
