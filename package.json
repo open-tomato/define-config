@@ -1,6 +1,6 @@
 {
   "name": "@open-tomato/define-config",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Typed config arrays with id-keyed merge and outcome-typed step graphs. Merges with $replace and $layer support, validates with Standard Schema. Dependency-free.",
   "private": false,
   "publishConfig": {
@@ -26,6 +26,7 @@
   "license": "Apache-2.0",
   "author": "Marcos Tomatti <marcos@opentomato.io>",
   "packageManager": "bun@1.3.14",
+  "engines": { "node": ">=22" },
   "type": "module",
   "sideEffects": ["./src/index.ts"],
   "module": "./dist/index.js",

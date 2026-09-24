@@ -1,49 +1,111 @@
-- PIPESTATUS printed empty, so the first gates exit code was lost
-  trigger: when capturing a piped command's exit code inside a subshell redirected to a file
+- order places dry-run guards before v* tag ruleset, trusted publisher before non-dry-run publish
+  trigger: verifying execution order requirements
+  kind: pattern
+  cause: dependencies ensure workflow safety and prevent invalid state transitions
+  resolution: documented execution order matches all task requirements
+  artifact: section: Execution Order, phases 4-5
+  signal: loud
+- empty results for non-existent rulesets is expected state before application
+  trigger: testing ruleset read commands
+  kind: pattern
+  cause: rulesets don't exist yet; apply commands will create them
+  resolution: read commands will return populated rulesets after apply phase
+  artifact: (No main ruleset - expected)
+  signal: silent
+- read commands reliably return current settings for verification
+  trigger: reading current repo state with gh api
+  kind: pattern
+  cause: gh api respects -q filters for structured output
+  resolution: documented commands use consistent -q format for easy verification
+  artifact: gh api repos/open-tomato/define-config -q '...'
+  signal: loud
+- community markdown files use wider wrapping than code files
+  trigger: wrap width measurement for community files
+  kind: pattern
+  cause: different readability expectations for documentation vs code examples
+  resolution: measured README.md (123 chars for code examples) vs SECURITY.md (240) and confirmed CONTRIBUTING.md fits the community file pattern
+  artifact: CONTRIBUTING.md max line: 232 characters
+  signal: silent
+- grep -c prints 0 but exits 1 when there are no matches
+  trigger: when counting secrets references with grep -c
   kind: gotcha
-  cause: the echo ran in the parent shell after the subshell's pipeline ended
-  resolution: rerun without a pipe and read $? directly
-  artifact: exit=
+  cause: grep exit status reflects match presence, not the count
+  resolution: read the printed count, and treat exit 1 as expected here
+  artifact: 0
   signal: silent
-- the flow start name is at result.graph.flows.<flow>.start, not on the result root
-  trigger: when reading the start step from resolveGraph output
-  kind: location
-  cause: resolveGraph returns a { graph: { nodes, edges, hooks, flows } } wrapper
-  resolution: read g.graph.flows.f.start
-  artifact: graph.flows.f.start
+- Publishing section reorganized into three subsections for clarity
+  trigger: documentation scope in task definition
+  kind: pattern
+  cause: expanded content requires better organization
+  artifact: Registry and Access / Package Content / Release Process subsections
   signal: silent
-- Test 1: $start valid ref → start=f.first ✓; Test 2: $start unknown → start='' + unknown-step error ✓; Test 3: $start omitted → starts at first ✓; Test 4: $unattended works ✓; Test 5: step/on/expect keys recognized ✓; Test 6: sugar keys (onTrue/onFalse) fold ✓; Test 7: when: hooks work ✓
-  trigger: scratch run output
+- actionlint exits 1 on an unquoted expansion, even though shellcheck rates it only info
+  trigger: when passing an optional flag through an env var into a run step
+  kind: gotcha
+  cause: actionlint runs shellcheck on run: scripts and reports SC2086 as an error
+  resolution: build the npm arguments in a bash array and append --dry-run conditionally
+  artifact: SC2086:info:1:42: Double quote to prevent globbing and word splitting
+  signal: loud
+- npm latest (12.1.0) requires node ^22.22.2 || ^24.15.0 || >=26.0.0, so a floating Node 22 could reject it
+  trigger: when choosing the npm version for the publish job on Node 22
+  kind: gotcha
+  cause: npm 12 raised its engines floor within the Node 22 line
+  resolution: pinned npm@11.20.0, the newest 11.x, whose engines are ^20.17.0 || >=22.9.0
+  artifact: ^22.22.2 || ^24.15.0 || >=26.0.0
+  signal: silent
+- exit 128 (unknown tag, missing origin/main) would read as not-an-ancestor if the check only compares against 0
+  trigger: when testing ancestry through git merge-base --is-ancestor
+  kind: gotcha
+  cause: merge-base uses 0 for yes, 1 for no and other codes for errors
+  resolution: gitIsOnMain returns a boolean only for exits 0 and 1 and throws on anything else, so the refusal names git's error
+  artifact: git merge-base exited 128
+  signal: silent
+- inherited GIT_DIR or GIT_INDEX_FILE from a hook would point git in the mkdtemp repository at the real repository
+  trigger: when a test spawns git in a scratch repository
+  kind: pattern
+  cause: git honours GIT_* env vars over cwd
+  resolution: strip every GIT_* variable and set GIT_CONFIG_GLOBAL=/dev/null plus a fixed author and committer identity in the spawned env
+  artifact: scratchEnv
+  signal: silent
+- actions/setup-node v4 tops out at v4.4.0 (2025-04-14) while v7.0.0 exists; actions/checkout has v7.0.1
+  trigger: when reviewing the pinned action majors
   kind: location
-  artifact: All tests completed successfully with expected outputs
-  signal: loud
-- Now directs readers to both README.md#merge and README.md#resolveGraph for full rules
-  trigger: intro text updated
+  cause: the plan says to stay in the major the file already uses
+  resolution: left on v4; moving to a newer major is a separate decision
+  artifact: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+  signal: silent
+- uvx check-jsonschema --builtin-schema vendor.github-workflows validates the workflow file, and a copy with timeout-minutes: fifteen exits 1 as the control
+  trigger: when validating a GitHub workflow without adding a dev dependency
   kind: pattern
-  artifact: Line 104: AGENTS.md
-  signal: loud
-- All 9 keys cited with sources: step, on, onTrue, onFalse, onSuccess, onFail, onChoice, when, expect
-  trigger: step entry keys subsection added
-  kind: pattern
-  artifact: Lines 122-131: AGENTS.md
-  signal: loud
-- $start detailed (optional, first-step-default, unknown-step behavior); $unattended and step-ids each one bullet with source
-  trigger: flow-time keys fully specified with source citations
-  kind: pattern
-  artifact: Lines 118-120: AGENTS.md
-  signal: loud
-- lint, check-types, test, build, check-pack, check-node all report exit 0
-  trigger: all gates pass after changes
-  kind: pattern
-  artifact: all gates: exit 0
-  signal: loud
-- Section intro now directs readers to README.md#merge for complete documentation
-  trigger: added README link for full rules
-  kind: pattern
-  artifact: line 104: See [README.md#merge](README.md#merge) for the full rules
-  signal: loud
-- AGENTS.md lines 107-115 now cite src/merge/apply.ts and state each key's behavior precisely
-  trigger: merge-time keys rewritten with full specification
-  kind: location
-  artifact: lines 107-115 in AGENTS.md
-  signal: loud
+  cause: YAML is not covered by the repo's lint gate
+  resolution: run the schema check plus a broken-copy control; actionlint is not available through uvx
+  artifact: ok -- validation done
+  signal: silent
+- the releases API lists by creation date, so the first few entries mix majors and a newer v4 patch can sit below v7/v6 entries
+  trigger: when choosing the latest release in a major for GitHub Actions
+  kind: gotcha
+  cause: backport releases such as checkout v4.4.0 (2026-07) are published after newer majors
+  resolution: list refs/tags/<major>.* with git ls-remote and sort -V, then cross-check the SHA with gh api repos/<repo>/commits/<tag>
+  artifact: git ls-remote --tags https://github.com/actions/checkout.git refs/tags/v4.*
+  signal: silent
+- the schema accepts versioning-strategy on a bun entry, so only the ecosystem check catches it
+  trigger: when relying on the schemastore dependabot schema to vet bun options
+  kind: gotcha
+  cause: schemastore does not encode per-ecosystem support
+  resolution: run the bun -e ecosystem check as well as the schema check
+  artifact: restricted bun options: versioning-strategy
+  signal: silent
+- a sed on the `directory: /` line matches every update entry, so the option lands on github-actions too
+  trigger: when planting a key on the bun entry of a copied dependabot.yml with sed
+  kind: gotcha
+  cause: both entries have an identical directory line
+  resolution: target the bun entry by line number
+  artifact: versioning-strategy: increase
+  signal: silent
+- bun run lint passes regardless of YAML content
+  trigger: when adding YAML under .github
+  kind: gotcha
+  cause: eslint config lints ts/js/md/json only, not YAML
+  resolution: validate YAML with Bun.YAML.parse or check-jsonschema instead
+  artifact: $ eslint .
+  signal: silent

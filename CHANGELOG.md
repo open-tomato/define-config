@@ -2,6 +2,11 @@
 
 One section per released version, newest first, headed `## <version> — <date>, <release title>`. All additions to the public surface carry a change note.
 
+## 0.5.2 — 2026-09-24, repository health for a public npm package
+
+- **documentation**: `README.md` carries CI status, npm version and npm provenance badges under its heading, and states the Node 22 floor under `## Install`.
+- **package**: the published manifest declares `engines.node` `>=22`; releases are published from CI by pushing a `v<version>` tag, which `.github/workflows/publish.yml` publishes with npm trusted publishing and `--provenance`, with no npm token.
+
 ## 0.5.1 — 2026-09-24, one `bun run gates` command that CI and agents both run
 
 - **tooling**: `bun run gates` removes `dist/` and runs `lint`, `check-types`, `test`, `build`, `check-pack` and `check-node` in that order, one line per gate, stopping at the first non-zero exit with that code; `check-node` no longer builds on its own and is skipped with a printed line when no real `node` is on `PATH`, except under `CI=true`, where that fails the run; CI runs only `bun run gates`, and `AGENTS.md` names it as the one command to run before reporting done.

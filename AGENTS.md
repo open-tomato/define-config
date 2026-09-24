@@ -49,11 +49,13 @@ src/
 scripts/
 ├── gates.ts                   # Run all linting/test gates
 ├── pack-check.ts              # Verify npm pack contents
+├── publish-guard.ts           # Release validation guard
 ├── reload-node.mjs            # Node.js reload verification
 └── <script>.test.ts           # Colocated unit tests
 
 context/
-└── packaging.md               # Pack validation reference
+├── packaging.md               # Pack validation reference
+└── repository-settings.md     # Repository configuration guide
 
 dist/                          # Built output (generated, not tracked)
 ├── index.js                   # ESM bundle
@@ -157,18 +159,33 @@ Write tests first (RED), implement to pass (GREEN), refactor (IMPROVE), verify c
 
 ## Publishing
 
+### Registry and Access
+
 - **Registry:** npmjs (https://registry.npmjs.org/)
 - **Scope:** `@open-tomato`
 - **Access:** public
-- **Sideeffects:** `["./src/index.ts"]` — every published `dist/` file is
-  side-effect-free (pure module, tree-shaking safe). The one listed path is
-  the build entry, and it is not published: with `"sideEffects": false`,
-  `bun build` 1.3.14 treats the entry as dead and emits a `dist/index.js`
-  that exports names it never defines. `src/index.test.ts` catches this.
+- **Node version:** `engines.node: ">=22"` in `package.json`. The `check-node` gate runs the built module under Node 22 in CI before release.
+
+### Package Content
+
+- **Sideeffects:** `["./src/index.ts"]` — every published `dist/` file is side-effect-free (pure module, tree-shaking safe). The one
+  listed path is the build entry, and it is not published: with `"sideEffects": false`, `bun build` 1.3.14 treats the entry as dead
+  and emits a `dist/index.js` that exports names it never defines. `src/index.test.ts` catches this.
 - **Package entrypoint:** `./dist/index.js`
 - **Types:** `./dist/index.d.ts`
 - **Files included:** `dist/` and `NOTICE`
 - **No runtime dependencies** — ever. Only dev dependencies allowed.
+
+### Release Process
+
+A release is initiated with `rafa release tag`, which tags the current commit with `v<version>` and increments the version in `package.json`.
+Pushing this tag triggers `.github/workflows/publish.yml`, which publishes to npm using **npm trusted publishing** (no token on the
+runner) with the `--provenance` flag enabled. The workflow runs the release guard in `scripts/publish-guard.ts` to verify the tag
+matches the package version and the commit is on the default branch, then `bun run gates` to verify all quality checks pass, and
+finally `npm publish --provenance --access public`. The workflow accepts a `workflow_dispatch` input `dry-run` (defaults to `true`) to
+rehearse a tag without publishing; set it to `false` to perform an actual publish. **No npm token exists; nobody publishes from a
+laptop.** The workflow runs under `actions/setup-node` with `registry-url: https://registry.npmjs.org`, which writes the `.npmrc` npm
+reads for trusted publishing authentication.
 
 ## Agent Integration
 
