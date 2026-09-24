@@ -1,3 +1,18 @@
+- README maintains 123-character line width limit with no lines exceeding
+  trigger: Wrap width enforcement
+  kind: pattern
+  artifact: Maximum line width: 123 chars
+  signal: silent
+- The TSDoc @example output already included hooks: [] before this task
+  trigger: TSDoc already includes hooks
+  kind: gotcha
+  artifact: // hooks: [], in line 56 of src/graph/index.ts
+  signal: silent
+- A when: placement creates a GraphHook in result.graph.hooks with flow, node, anchor, and position properties
+  trigger: README example for hooks
+  kind: pattern
+  artifact: result.graph.hooks = [{ flow: 'next', node: 'next.lint', anchor: 'next.test', position: 'before' }]
+  signal: loud
 - type imports from parent and sibling form one import group; a blank line between them is rejected
   trigger: adding a parent-path import type above an existing sibling import type block
   kind: gotcha
