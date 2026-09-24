@@ -48,7 +48,8 @@
     "lint": "eslint .",
     "check-types": "tsc --noEmit",
     "check-pack": "bun run scripts/pack-check.ts",
-    "check-node": "bun run build && node scripts/reload-node.mjs"
+    "check-node": "bun run build && node scripts/reload-node.mjs",
+    "gates": "bun run scripts/gates.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
