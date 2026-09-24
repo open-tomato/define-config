@@ -1,0 +1,26 @@
+- tsc -p tsconfig.build.json emits dist/digest/canonicalize.d.ts even though index.ts does not export it yet
+  trigger: when running bun run build after adding an unexported src module
+  kind: location
+  cause: the build tsconfig covers all non-test src files, not only the index graph
+  resolution: expected; same as every other src module
+  signal: silent
+- the plan names undefined only in arrays and at the root; dropping it in a Map or Set would make new Map([['a', undefined]]) print the same as an empty Map
+  trigger: when deciding how canonicalize handles undefined inside a Map or Set
+  kind: gotcha
+  cause: the spec does not cover Map or Set members
+  resolution: refuse undefined anywhere it would be written; only object properties are dropped
+  signal: silent
+- the literal rule lets { $date: 'x', y: undefined } and a class instance with only a $date key print as a tagged Date
+  trigger: when applying the plan's rule that refuses a plain object whose only own key is a tag name
+  kind: gotcha
+  cause: undefined properties are dropped and class instances are written like plain objects, so own keys differ from written keys
+  resolution: apply the tag guard to the written keys of any object written by its keys
+  artifact: {"$date":"x"}
+  signal: silent
+- TypeScript does not narrow the default branch of a typeof switch to object, so passing value on fails
+  trigger: when switching on typeof value and handling objects in the default branch
+  kind: gotcha
+  cause: narrowing only applies to an explicit case 'object' label
+  resolution: use case 'object': instead of default; the switch is then exhaustive under noImplicitReturns
+  artifact: error TS2345: Argument of type '{} | undefined' is not assignable to parameter of type 'object'.
+  signal: loud
