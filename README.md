@@ -335,7 +335,7 @@ surface diagnostics as lint squiggles.
 | `impure-when` | error | A `when:` placement is on a step not registered as `pure: true`. |
 | `cycle` | error | An edge closes a loop in the flow and is not marked `repeat: true`. |
 | `interactive-unattended` | error | An `$unattended` flow reaches an interactive step (registered with `interactive: true`). |
-| `unreachable` | warn | A step entry is never reached when walking the flow from its `$start`. |
+| `unreachable` | warn | A step entry is never reached when walking the flow from its `$start`. A `when:` step is reached only from its anchor, so one whose anchor does not resolve gets `unreachable` beside its `unknown-step`. |
 | `schema` | error | A Standard Schema V1 validation issue. |
 | `load-failed` | error | The loader found a file it could not read: no reader for its extension, `import()` or the reader threw, no `default` export, or a value that is not an entry or an array of entries. |
 
