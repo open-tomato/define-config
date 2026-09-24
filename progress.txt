@@ -1,3 +1,10 @@
+- load is not exported from src/index.ts, only createLoader
+  trigger: when writing tests that must import only from ../index
+  kind: gotcha
+  cause: public API exposes createLoader(...).load
+  resolution: use createLoader(options).load(cwd) in the test
+  artifact: export { createLoader } from './loader'
+  signal: silent
 - progress.txt was already modified before this task and will be committed with it by git add -A
   trigger: when reading git status at session start
   kind: location
