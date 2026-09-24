@@ -95,12 +95,16 @@ diagnostic.
 
 ```ts
 import { z } from 'zod';
+
 import { validate } from '@open-tomato/define-config';
 
 const schema = z
   .object({
     name: z.string(),
-    port: z.number().int().positive(),
+    port: z
+      .number()
+      .int()
+      .positive(),
   })
   .strict();
 
@@ -149,7 +153,7 @@ const result = resolveGraph(
   {
     lint: { outcomes: ['success', 'fail'] },
     test: { outcomes: ['success', 'fail'] },
-  }
+  },
 );
 
 console.log(result.graph.nodes['build.lint']);
@@ -200,8 +204,9 @@ names of its own.
 ```ts
 import { homedir } from 'node:os';
 
-import { createLoader } from '@open-tomato/define-config';
 import { z } from 'zod';
+
+import { createLoader } from '@open-tomato/define-config';
 
 const schema = z.object({
   name: z.string(),
@@ -219,8 +224,15 @@ const loader = createLoader({
 });
 
 const { config, diagnostics, sources } = await loader.load(process.cwd());
-// config: the merged value; diagnostics: every problem, in stage order;
-// sources: [{ layer, path }] for each layer that had a file, with an absolute path
+
+console.log(config);
+// the merged value
+
+console.log(diagnostics);
+// every problem, in stage order
+
+console.log(sources);
+// [{ layer, path }] for each layer that had a file, with an absolute path
 ```
 
 A relative `dir` resolves against the directory passed to `load`. A file that cannot be read

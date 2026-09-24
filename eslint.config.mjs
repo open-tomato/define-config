@@ -11,6 +11,30 @@ import { configs as tsLintConfig } from 'typescript-eslint';
 
 import sharedRules from './sharedRules.mjs';
 
+const fenceProcessor = markdown.processors.markdown;
+
+/**
+ * The `markdown/markdown` processor, extended to lint the Markdown file
+ * itself as well as its fences. The stock processor returns only the
+ * fenced blocks, so a `.md` file it runs on is never linted as Markdown
+ * and `markdown/recommended` goes silent over it, whether the processor
+ * sits in the same config object or in its own. ESLint lints a string
+ * block with the file's own config (the `markdown/commonmark` language
+ * here), so the whole text goes first and its messages come back
+ * unchanged; the fence messages go through the stock `postprocess`,
+ * which maps them back onto the file.
+ *
+ * @type {import("eslint").Linter.Processor} */
+const markdownWithFences = {
+  meta: { name: 'markdown-with-fences' },
+  supportsAutofix: true,
+  preprocess: (text, filename) => [text, ...fenceProcessor.preprocess(text, filename)],
+  postprocess: ([fileMessages = [], ...fenceMessages], filename) => [
+    ...fileMessages,
+    ...fenceProcessor.postprocess(fenceMessages, filename),
+  ],
+};
+
 /**
  * ESLint flat config for this single library package: `src/`, `scripts/`
  * and the root-level files. Copied from the open-tomato/rafa checkout and
@@ -69,8 +93,27 @@ export default defineConfig([
       markdown,
     },
     extends: ['markdown/recommended'],
+    processor: markdownWithFences,
     rules: {
       'markdown/no-missing-label-refs': 'off',
+    },
+  },
+  {
+    // The `ts` and `js` fences of a Markdown file, as virtual children
+    // (`README.md/0.ts`, …). The block above already gives them the
+    // TypeScript rule set; a fence in any other language matches no
+    // config and is not linted.
+    files: ['**/*.md/*.ts', '**/*.md/*.js'],
+    rules: {
+      // The package's own name resolves to `dist/` only after a build,
+      // and CI lints before it builds.
+      'import/no-unresolved': ['error', { ignore: ['^bun:', '^@open-tomato/define-config$'] }],
+    },
+    settings: {
+      // Without `dist/` the package's own name is unresolved and would
+      // sort as external; pin it to internal so the order of a block's
+      // imports does not depend on whether a build has run.
+      'import/internal-regex': '^@open-tomato/define-config$',
     },
   },
   {

@@ -45,7 +45,7 @@ bun run build
 ```
 
 **Gate behavior notes:**
-- `bun run lint` runs ESLint over `src/`, `scripts/`, and root-level files. Ignores `dist/`, `node_modules/`, `.claude/`, `.rafa/`. `.md` files get `markdown/recommended` with no code-block processor, so fenced `ts` blocks in `README.md` are never parsed: no gate checks README examples. Verify them by extracting each block and running `tsc` against `src/index.ts` (use a non-dot temp dir; `tsc` include globs skip dot-directories).
+- `bun run lint` runs ESLint over `src/`, `scripts/`, and root-level files. Ignores `dist/`, `node_modules/`, `.claude/`, `.rafa/`. `.md` files get `markdown/recommended` over their Markdown structure, and the `markdown/markdown` processor (wrapped in `eslint.config.mjs` so the file itself is still linted as Markdown) turns each fence into a virtual child such as `README.md/0.ts`: `ts` and `js` fences get the TypeScript rule set, and a fence in any other language is not linted. Inside a fence `@open-tomato/define-config` is exempt from `import/no-unresolved` and sorts as an internal import, so the result does not depend on whether `dist/` exists. Lint parses and style-checks README examples but does not type-check them; for that, extract each block and run `tsc` against `src/index.ts` (use a non-dot temp dir; `tsc` include globs skip dot-directories).
 - `bun run check-types` includes test files; `@ts-expect-error` in a test is a real type assertion.
 - `bun test` discovers and runs `**/*.test.ts` files in parallel.
 - `bun run build` removes `dist/`, bundles to ESM, and emits TypeScript declarations. `tsconfig.build.json` excludes `src/**/*.test.ts` and `src/**/fixtures/**`, so neither test files nor `.ts` files under `src/loader/fixtures/` get declarations in `dist/`; tests still compile under `tsconfig.json`.
@@ -93,15 +93,17 @@ Minimum coverage: **80%**. Use Bun's test runner with the AAA (Arrange-Act-Asser
 ```ts
 import { test, expect } from 'bun:test';
 
-test('descriptive test name', () => {
+import { merge } from '@open-tomato/define-config';
+
+test('a later entry replaces a scalar set by an earlier one', () => {
   // Arrange
-  const input = { /* setup */ };
+  const entries = [{ port: 8000 }, { port: 9000 }];
 
   // Act
-  const result = myFunction(input);
+  const result = merge(entries);
 
   // Assert
-  expect(result).toEqual(expected);
+  expect(result.value).toEqual({ port: 9000 });
 });
 ```
 

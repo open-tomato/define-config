@@ -1,3 +1,10 @@
+- A planted dist file is wiped before check-pack sees it, so check-pack exits 0 and looks clean
+  trigger: when planting a stray file under dist/ to test check-pack
+  kind: gotcha
+  cause: bun pm pack --dry-run runs the prepack script (bun run build), and build starts with rm -rf dist
+  resolution: temporarily set prepack to a no-op in package.json, plant, run check-pack, then restore package.json
+  artifact: check-pack: ok
+  signal: silent
 - bun test reports 427 pass, not the 398 recorded for 9e09c35
   trigger: comparing the bun test count with the plan context
   kind: location
