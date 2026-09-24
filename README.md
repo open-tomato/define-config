@@ -379,9 +379,11 @@ body is never read, so body changes do not change the digest). Class instances a
 plain objects by their own enumerable string keys. Shared references (the same object or array
 reached by two paths) are written twice, never refused. Cyclic references—where a value contains
 itself—throw `CanonicalizeError` with `code: 'cyclic-value'` and `path: string[]`, the key path
-from the root to the cycle. `NaN`, `±Infinity`, `bigint`, symbols, `undefined` at the root or
-inside an array, invalid `Date` objects, and plain objects whose only key is one of the four tag
-names throw `CanonicalizeError` with `code: 'not-canonical'` and `path`. `digest(value)` returns
+from the root to the cycle. `NaN`, `±Infinity`, `bigint`, symbols, `undefined` wherever it would
+be written (the root, an array element, a `Map` key or value, a `Set` member; only an object
+property that is `undefined` is dropped), invalid `Date` objects, and any object whose only
+written key is one of the four tag names throw `CanonicalizeError` with `code: 'not-canonical'`
+and `path`. `digest(value)` returns
 `'sha256:' + sha256_hex(canonicalize(value))`, synchronous from `node:crypto`.
 
 A host digests one of `result.value`, `result.config` or `result.graph` to represent a merged

@@ -1,3 +1,10 @@
+- including the fence line makes bun fail on the extracted file
+  trigger: when extracting the README example block with awk or sed for a bun run
+  kind: gotcha
+  cause: the line range or awk pattern kept the opening three-backtick ts fence
+  resolution: take only the lines between the fences (README lines 391-411) and rewrite the package import to dist/index.js
+  artifact: error: Unterminated string literal
+  signal: loud
 - README maintains 123-character wrap width
   trigger: wrap width measurement
   kind: pattern
