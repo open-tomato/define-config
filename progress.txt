@@ -1,3 +1,10 @@
+- PIPESTATUS printed empty, so the first gates exit code was lost
+  trigger: when capturing a piped command's exit code inside a subshell redirected to a file
+  kind: gotcha
+  cause: the echo ran in the parent shell after the subshell's pipeline ended
+  resolution: rerun without a pipe and read $? directly
+  artifact: exit=
+  signal: silent
 - the flow start name is at result.graph.flows.<flow>.start, not on the result root
   trigger: when reading the start step from resolveGraph output
   kind: location

@@ -101,7 +101,7 @@ during development, `bun run <gate>` stays available to run a single gate.
 
 ## Reserved Keys in Config Objects
 
-The library recognizes these keys with special semantics. Merge-time keys control how entries combine; flow-time keys structure step graphs. See [README.md#merge](README.md#merge) and [README.md#resolveGraph](README.md#resolveGraph) for the full rules.
+The library recognizes these keys with special semantics. Merge-time keys control how entries combine; flow-time keys structure step graphs. See [README.md#merge](README.md#merge) and [README.md#resolveGraph](README.md#resolvegraph) for the full rules.
 
 ### Merge-time keys
 - **`$replace: true`** — Inside a keyed map, replaces that entire subtree with the new value. On the entry itself,
@@ -130,7 +130,7 @@ The library recognizes these keys with special semantics. Merge-time keys contro
 - **`when`** — Optional string; a placement hook of the form `before:<id>` or `after:<id>` that positions this step relative to another without an edge. Source: `src/graph/build.ts`
 - **`expect`** — Optional string; the expected outcome for this entry. Validates that the step declares this outcome. Source: `src/graph/build.ts`
 
-See [README.md#resolveGraph](README.md#resolveGraph) for the full rules and examples.
+See [README.md#resolveGraph](README.md#resolvegraph) for the full rules and examples.
 
 ## Test Coverage & TDD
 
