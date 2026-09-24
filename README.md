@@ -109,6 +109,10 @@ console.log(result.provenance.get('a.x'));
 // [{ entry: 0, kind: 'set' }, { entry: 1, layer: 'project', kind: 'set' }]
 ```
 
+`provenanceOf(result, path)` reads one path's records out of any `{ provenance }`, taking the path
+dot-joined (`'a.x'`) or as an array (`['a', 'x']`), with `''` for the root; a path no entry touched
+yields `[]`.
+
 ## validate
 
 Run a Standard Schema V1 schema over a value and report every issue it raises as a `schema`

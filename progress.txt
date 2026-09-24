@@ -1,0 +1,14 @@
+- Object.freeze on a Map does not stop Map.prototype.set
+  trigger: when freezing a ReadonlyMap returned from a public API
+  kind: gotcha
+  cause: freeze locks object properties, not a Map's internal entries
+  resolution: freeze the map, its arrays and its records, and say in TSDoc that only a write casting away ReadonlyMap can change the result
+  artifact: Object.freeze(copy)
+  signal: silent
+- a test that two merge() calls return different map objects passes even without the copy
+  trigger: when asserting that a returned provenance map is a copy
+  kind: gotcha
+  cause: apply already builds a new Map on every merge, so identity tells you nothing about copying
+  resolution: prove the copy through freezing: the freeze test fails when the frozen copy is removed
+  artifact: expect(merge(entries).provenance).not.toBe(merge(entries).provenance)
+  signal: silent
