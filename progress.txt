@@ -1,0 +1,7 @@
+- /tmp/x already exists as a directory, so the redirect failed and the gate showed exit 1
+  trigger: when redirecting gate output to /tmp/x
+  kind: gotcha
+  cause: a leftover directory on the host
+  resolution: redirect to a unique file name such as /tmp/dc-test.log
+  artifact: is a directory: /tmp/x
+  signal: loud
