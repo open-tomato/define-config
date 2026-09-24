@@ -1,3 +1,31 @@
+- a flow with no entries (idle: {}) resolves to start '' with no diagnostics, while a $start naming nothing adds an unknown-step error
+  trigger: when a test needs a flow whose start is empty without any error diagnostic
+  kind: pattern
+  cause: startOf returns '' for a flow with no entries without reporting anything
+  resolution: use an empty flow as the start-'' fixture
+  artifact: start: ''
+  signal: silent
+- every entry carrying when: must run a step registered pure: true, or build reports impure-when
+  trigger: when building a when: hook fixture through resolveGraph
+  kind: pattern
+  cause: buildWhen checks spec.pure
+  resolution: register the hooked steps (lint, format, stamp) with pure: true and reuse them through step: for extra hook entries
+  artifact: impure-when
+  signal: loud
+- import/order puts ./index in its own index group after siblings, separated by a blank line
+  trigger: when a test file under src/graph imports both a sibling module and ./index
+  kind: gotcha
+  cause: the import/order groups end with sibling then index
+  resolution: import from ./walk first, then a blank line, then import from ./index
+  artifact: `./walk` import should occur before import of `./index`
+  signal: loud
+- The claim is false in general: in a flow with no diagnostics whose $start comes after the target of a repeat: true loop, the target is in reachable but not in walkOrder
+  trigger: when checking the next task's claim that the set of walkOrder equals the set of reachable
+  kind: gotcha
+  cause: reachable follows repeat: true edges and walkOrder never does, and cycles picks the back edge by Graph.nodes order, not by the flow start, so no cycle error flags this shape
+  resolution: The walk.test.ts fixtures also reach the repeat target through a hook, so the two sets stay equal; the next task must check that the reachability.test.ts flows it uses have no node reached only through a repeat: true edge
+  artifact: reachable [ "f.b", "f.a", "f.c" ] walkOrder [ "f.b", "f.c" ]
+  signal: silent
 - /tmp/x already exists as a directory, so the redirect failed and the gate showed exit 1
   trigger: when redirecting gate output to /tmp/x
   kind: gotcha

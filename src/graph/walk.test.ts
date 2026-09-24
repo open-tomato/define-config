@@ -2,6 +2,10 @@ import type { Flows, StepRegistry } from './types';
 
 import { describe, expect, test } from 'bun:test';
 
+import { build } from './build';
+import { flatten } from './flatten';
+import { normalise } from './normalise';
+import { reachability } from './reachability';
 import { hooksOf, next, reachable, walkOrder } from './walk';
 
 import { resolveGraph } from './index';
@@ -253,5 +257,97 @@ describe('walkOrder', () => {
       'build.test',
       'build.report',
     ]);
+  });
+});
+
+/** The registry of `reachability.test.ts`, whose flows the agreement test also covers. */
+const reachabilityRegistry: StepRegistry = {
+  build: { outcomes: ['success', 'fail'] },
+  test: { outcomes: ['success', 'fail'] },
+  lint: { outcomes: ['success', 'fail'], pure: true },
+  ask: { outcomes: ['yes', 'no'], interactive: true },
+  report: { outcomes: [] },
+};
+
+/** The `reachability.test.ts` flow maps, each with the flows it defines. */
+const reachabilityFlows: Record<string, unknown>[] = [
+  { next: { build: { on: { success: 'test' } }, test: { on: { fail: 'report' } }, report: {} } },
+  { next: { build: { on: { success: 'test' } }, test: {}, lint: {} } },
+  { next: { build: { on: { success: 'test' } }, test: {}, $start: 'test' } },
+  { next: { build: {}, test: { on: { success: 'lint' } }, lint: {} } },
+  {
+    next: {
+      build: { on: { success: 'test', fail: 'lint' } },
+      test: { on: { fail: { to: 'build', repeat: true }, success: 'report' } },
+      lint: {},
+      report: {},
+    },
+  },
+  { next: { build: {}, test: { on: { fail: { step: 'lint' } } } } },
+  { next: { build: {}, test: { on: { success: 'report' } } } },
+  { next: { build: { on: { success: 'test' } }, test: {} }, main: { build: {}, test: {} } },
+  { next: { build: {}, test: {}, $start: 'missing' } },
+  { next: {} },
+  { next: { build: { on: { success: 'test' } }, test: {}, lint: { when: 'before:test' } } },
+  { next: { build: {}, lint: { when: 'after:build', on: { fail: 'report' } }, report: {} } },
+  { next: { build: {}, test: {}, lint: { when: 'after:test' } } },
+  { next: { build: { on: { success: 'lint' } }, lint: { when: 'before:test' }, test: {} } },
+  { next: { $unattended: true, build: { on: { fail: 'ask' } }, ask: {} } },
+  { next: { $unattended: true, ask: { on: { yes: 'build' } }, build: {} } },
+  { next: { $unattended: true, build: { on: { fail: 'ask' } } } },
+  {
+    next: {
+      $unattended: true,
+      build: { on: { fail: { step: 'ask' } } },
+      prompt: { step: 'ask', when: 'before:build' },
+    },
+  },
+];
+
+describe('reachable, walkOrder and reachability agree', () => {
+  const cases: { flows: Record<string, unknown>; registry: StepRegistry }[] = [
+    { flows, registry },
+    ...reachabilityFlows.map((item) => ({ flows: item, registry: reachabilityRegistry })),
+  ];
+
+  test('the cases are not vacuous: some flow has a non-empty start and some node is unreached', () => {
+    const starts = cases.flatMap((item) => Object.values(resolveGraph(item.flows, item.registry).graph.flows))
+      .filter((flow) => flow.start !== '');
+    expect(starts.length).toBeGreaterThan(10);
+  });
+
+  test('for every flow with a start: reachable and the unreachable warnings are disjoint, together the nodes minus unreached implicit nodes, and walkOrder covers reachable', () => {
+    let checked = 0;
+    let warned = 0;
+    for (const item of cases) {
+      // Arrange
+      const result = build(flatten(normalise(item.flows).flows), item.registry);
+      const resolvedGraph = resolveGraph(item.flows, item.registry).graph;
+      const warnings = reachability(result).filter((diagnostic) => diagnostic.code === 'unreachable');
+
+      for (const flow of Object.values(resolvedGraph.flows)) {
+        if (flow.start === '') {
+          continue;
+        }
+        // Act
+        const reached = reachable(resolvedGraph, flow.name);
+        const reachedSet = new Set(reached);
+        const warnedKeys = flow.nodes.filter((key) => warnings.some(
+          (warning) => warning.path.join('\u0000') === (result.sources[key]?.path ?? []).join('\u0000'),
+        ) && !reachedSet.has(key));
+        const unreachedImplicit = flow.nodes.filter((key) => result.sources[key]?.implicit === true && !reachedSet.has(key));
+        const expected = flow.nodes.filter((key) => !unreachedImplicit.includes(key));
+
+        // Assert
+        expect(warnedKeys.filter((key) => reachedSet.has(key))).toEqual([]);
+        expect(new Set([...reached, ...warnedKeys])).toEqual(new Set(expected));
+        expect(reached.length + warnedKeys.length).toBe(expected.length);
+        expect(new Set(walkOrder(resolvedGraph, flow.name))).toEqual(reachedSet);
+        checked += 1;
+        warned += warnedKeys.length;
+      }
+    }
+    expect(checked).toBeGreaterThan(10);
+    expect(warned).toBeGreaterThan(0);
   });
 });
