@@ -1,3 +1,17 @@
+- description field updated to mirror README theme
+  trigger: package.json alignment
+  kind: pattern
+  cause: consistency requirement between README and package metadata
+  resolution: rewrote package.json description to match new README opening
+  artifact: Typed config arrays with id-keyed merge and outcome-typed step graphs. Merges with $replace and $layer support, validates with Standard Schema. Dependency-free.
+  signal: loud
+- README opening now follows the required structure
+  trigger: three-sentence rewrite
+  kind: pattern
+  cause: task requirement for clarity and consistency
+  resolution: split two-sentence opening into three distinct sentences per spec
+  artifact: Typed config arrays with id-keyed merge and outcome-typed step graphs.
+  signal: loud
 - AGENTS.md has a ts fence (the TDD template) that the processor also lints, not only README.md
   trigger: when enabling fence linting over **/*.md
   kind: location
