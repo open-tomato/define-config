@@ -58,7 +58,7 @@
     "@stylistic/eslint-plugin": "^5.10.0",
     "@types/bun": "^1.4.0",
     "@typescript-eslint/parser": "^8.69.0",
-    "eslint": "^9.39.4",
+    "eslint": "^10.11.0",
     "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-jsonc": "^3.4.2",
