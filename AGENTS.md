@@ -2,7 +2,7 @@
 
 This is a **single-package library** for typed config arrays with id-keyed merge, Standard Schema validation, and outcome-typed step graphs. Dependency-free, fully typed, published to npmjs.
 
-**Version:** 0.1.0 · **Language:** TypeScript · **Runtime:** Bun
+**Language:** TypeScript · **Runtime:** Bun
 
 ## Package Layout
 
