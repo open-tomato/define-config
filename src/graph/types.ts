@@ -57,8 +57,13 @@ export type StepEntry<Outcomes extends string = string, Ids extends string = str
   onSuccess?: Handler;
   /** Sugar for `on: { fail: … }`. */
   onFail?: Handler;
-  /** Sugar for the edge taken on whichever choice an interactive step ends in. */
-  onChoice?: Handler;
+  /**
+   * Sugar for `on: { <choice>: … }` on an interactive step: a map from each
+   * choice the step can end in to the edge taken on it, each value a step id
+   * or an edge object. Every key becomes an outcome of its own; a single
+   * step id or edge object in place of the map is a type error.
+   */
+  onChoice?: Record<string, Handler>;
   /** Places this entry immediately before or after the step entry with that id. */
   when?: `before:${Ids}` | `after:${Ids}`;
   /** The outcome this entry is expected to end in. */

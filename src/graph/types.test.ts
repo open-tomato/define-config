@@ -57,6 +57,17 @@ describe('StepEntry', () => {
     expect(entry.onFail).toEqual({ to: 'attempt', repeat: true });
   });
 
+  test('accepts an onChoice map of step ids and edge objects', () => {
+    const entry: StepEntry<Outcomes> = { onChoice: { yes: 'deploy', no: { to: 'ask', repeat: true } } };
+    expect(entry.onChoice).toEqual({ yes: 'deploy', no: { to: 'ask', repeat: true } });
+  });
+
+  test('refuses an onChoice written as a single step id', () => {
+    // @ts-expect-error `onChoice` is a map of choice to handler, not one handler
+    const bad: StepEntry<Outcomes> = { onChoice: 'x' };
+    expect<unknown>(bad.onChoice).toBe('x');
+  });
+
   test('passes any other key through as a step option', () => {
     const entry: StepEntry<Outcomes> = { step: 'run', command: 'bun test', onFail: 'report' };
     expect(entry.command).toBe('bun test');

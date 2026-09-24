@@ -1,0 +1,21 @@
+- progress.txt was already modified (emptied) in the working tree before the task began
+  trigger: when the session starts
+  kind: location
+  cause: left by an earlier loop step, not by this task
+  resolution: left untouched; git add -A will include the deletion
+  artifact: progress.txt | 224 -----
+  signal: silent
+- restoring the old types.ts via git stash and running tsc shows which directives the change made meaningful
+  trigger: when adding @ts-expect-error assertions for a narrowed type
+  kind: pattern
+  cause: an @ts-expect-error that already errored under the old type proves nothing about the narrowing
+  resolution: under the old type the 2 and false lines report TS2578 and 'twice' does not, as expected
+  artifact: error TS2578: Unused '@ts-expect-error' directive.
+  signal: silent
+- src/graph/index.test.ts typed a Flows value with repeat: 2, which broke under the narrowed type
+  trigger: when narrowing a public type used in typed fixtures of other test files
+  kind: gotcha
+  cause: the Flows type-acceptance test used a number repeat incidentally
+  resolution: changed it to repeat: true; build to test is not a back edge so diagnostics stay empty
+  artifact: src/graph/index.test.ts(134,70): error TS2322: Type 'number' is not assignable to type 'true'.
+  signal: loud
