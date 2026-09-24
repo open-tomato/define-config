@@ -1,3 +1,17 @@
+- README maintains 123-character wrap width
+  trigger: wrap width measurement
+  kind: pattern
+  cause: Hand-wrapped prose with careful line breaks
+  resolution: All new prose fits within established width constraint
+  artifact: max width: 123
+  signal: loud
+- SHA-256 digests are deterministic and change predictably when values change
+  trigger: example output verification
+  kind: pattern
+  cause: Both port 9000 and port 9001 produce consistent, different hashes
+  resolution: Example output is accurate and matches the comments
+  artifact: sha256:d3dc407e4672bb0247355c4c613df22e90e38b21dcff374587a33900944df9f7
+  signal: loud
 - BSD sed -i rejects the edit and leaves the file unchanged
   trigger: when running sed -i with a pattern containing quotes on macOS
   kind: gotcha
