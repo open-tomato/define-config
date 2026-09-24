@@ -315,6 +315,40 @@ describe('no caching', () => {
   });
 });
 
+describe('reload', () => {
+  test('a non-boolean reload is refused by load and by createLoader', async () => {
+    // Arrange
+    const options = { lookup: LOOKUP, layers: [], reload: 'yes' as unknown as boolean };
+
+    // Act and assert
+    await expect(load(root, options)).rejects.toThrow('createLoader: expected reload to be a boolean, got string');
+    expect(() => createLoader(options)).toThrow(TypeError);
+    expect(() => createLoader(options)).toThrow('createLoader: expected reload to be a boolean, got string');
+  });
+
+  test('with reload: true a second load of an edited .mjs file yields the edit', async () => {
+    // Arrange: a directory of its own, since an imported path stays cached for the whole run.
+    const dir = await mkdtemp(join(tmpdir(), 'define-config-loader-reload-'));
+    const file = join(dir, 'config.mjs');
+    try {
+      await writeFile(file, 'export default { version: 1 };\n');
+      const loader = createLoader({ lookup: ['config.mjs'], layers: [{ layer: 'project', dir }], reload: true });
+      const first = await loader.load(dir);
+
+      // Act
+      await writeFile(file, 'export default { version: 2 };\n');
+      const second = await loader.load(dir);
+
+      // Assert
+      expect(first.config).toEqual({ version: 1 });
+      expect(second.diagnostics).toEqual([]);
+      expect(second.config).toEqual({ version: 2 });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe('createLoader binds its options', () => {
   test('a later change to the caller\'s arrays does not reach the loader', async () => {
     // Arrange

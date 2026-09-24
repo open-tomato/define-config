@@ -1,0 +1,33 @@
+- progress.txt was already modified (emptied, 82 lines removed) before this task began; git add -A will commit it with this task
+  trigger: when reading git status at session start
+  kind: location
+  cause: left by an earlier loop step, not by this task
+  resolution: left untouched and reported
+  signal: silent
+- perl s{}{} fails when the pattern itself holds unbalanced braces
+  trigger: when editing TypeScript with perl -0pi and a braces-delimited substitution
+  kind: gotcha
+  cause: brace delimiters nest with braces in the TS source
+  resolution: use the Edit tool for multi-line TS edits
+  artifact: Substitution replacement not terminated
+  signal: loud
+- the plan's measurement held: bun ignores ?v= on a file:// URL, so 4 reload tests failed under the node form
+  trigger: when the reload specifier uses the file URL form under bun test
+  kind: gotcha
+  cause: bun keys its module registry for file URLs without the query
+  resolution: pick the plain-path specifier on bun, as reloadSpecifier does
+  signal: loud
+- the implicit-arrow-linebreak rule refuses a template-literal body wrapped onto the next line
+  trigger: when a multi-line arrow's body starts on the line after =>
+  kind: pattern
+  cause: the arrow-functions-beside style rule
+  resolution: move part of the template into a const so the arrow body fits on the => line
+  artifact: Expected no linebreak before this expression
+  signal: loud
+- the exit code echoed after the pipe is tail's, so a failing lint read as a pass
+  trigger: when piping a gate through tail to shorten output
+  kind: gotcha
+  cause: $? after a pipeline reports the last command in the pipeline
+  resolution: redirect the gate to a file, echo $? right after it, then tail the file
+  artifact: @stylistic/implicit-arrow-linebreak
+  signal: silent
