@@ -1,3 +1,10 @@
+- several of those fixtures legitimately produce errors, such as interactive-unattended and a `when` on an unregistered-pure step, so a blanket no-errors assertion fails
+  trigger: when asserting no error diagnostics on the reachability.test.ts fixtures
+  kind: gotcha
+  cause: the fixtures exercise diagnostics rather than being clean flows
+  resolution: assert the no-error shape only on the walk.test.ts fixture, and skip it for the reachability.test.ts fixtures
+  artifact: `when` sits on step "ask", which is not registered as pure
+  signal: loud
 - a flow with no entries (idle: {}) resolves to start '' with no diagnostics, while a $start naming nothing adds an unknown-step error
   trigger: when a test needs a flow whose start is empty without any error diagnostic
   kind: pattern
