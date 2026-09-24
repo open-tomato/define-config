@@ -1,3 +1,10 @@
+- the plant makes the reload parameter unused, so the build fails and check-node exits 2 at tsc without running the Node script
+  trigger: when planting a failure in readModule by passing a literal false for reload
+  kind: gotcha
+  cause: noUnusedParameters rejects the unused parameter (TS6133)
+  resolution: plant a form that still reads the parameter, such as reload && false
+  artifact: error TS6133: 'reload' is declared but its value is never read.
+  signal: loud
 - lint passed on the new script using process.stdout.write/process.stderr.write; console.log was avoided per the no-console-in-production rule
   trigger: when writing a scripts/*.mjs that prints output
   kind: gotcha

@@ -300,8 +300,9 @@ the first one that is a file. It reads `.ts`, `.mts`, `.mjs` and `.js` through `
 `loaders`, keyed by the extension with its dot and called with the file's text and path. Every
 entry read is tagged with its layer's `$layer`. The entries are merged with `required` and
 `duplicates` and validated with `schema`, and when `steps` is given the merged `flows` section is
-resolved into `graph`. The lookup names below are only an example: the library knows no file
-names of its own.
+resolved into `graph`. Module files can see edits within one process with the
+[`reload`](#module-cache) option. The lookup names below are only an example: the library knows
+no file names of its own.
 
 ```ts
 import { homedir } from 'node:os';
@@ -442,6 +443,49 @@ then, so a schema is no guard against a file the host should not have imported.
 ## Module Cache
 
 The library caches nothing: every `load` looks up and reads the files again. The runtime's module
-cache still applies to `import()`, so a `.ts`, `.mts`, `.mjs` or `.js` config file already imported
-in this process yields the module it loaded first, even when the file has changed since. `.json`
-files and files read through `loaders` are read afresh on every `load`.
+cache still applies to `import()`. A `.ts`, `.mts`, `.mjs` or `.js` config file already imported
+in this process yields the module it loaded first, even when the file has changed since.
+
+With the `reload` option off (the default), this is the whole story: no bytes are read before
+importing by the file's URL. With `reload: true`, each `load` reads the file's bytes and computes
+a content key. If the bytes are unchanged, the key is the same, the import uses the cached module,
+and calling `load` again is cheap. If the bytes changed, the key is new, `import()` evaluates the
+file again and caches the new module.
+
+Two limits apply, by design:
+
+**Limit 1:** Only the config file itself is evaluated again. A module it imports resolves to a
+specifier with no content key and stays cached. A host that needs a fresh version of an imported
+module must restart the process.
+
+**Limit 2:** Every distinct content stays in the runtime's module registry for the life of the
+process. One module is retained per edit. A file edited ten times produces ten cached modules.
+
+A `.json` file or one read through `loaders` is read fresh on every `load`, regardless of the
+`reload` option; neither uses the module cache.
+
+```ts
+import { createLoader } from '@open-tomato/define-config';
+
+const loader = createLoader({
+  lookup: ['rafa.config.ts'],
+  layers: [{ layer: 'project', dir: '.' }],
+  reload: true,
+});
+
+// First load: reads and evaluates the file
+const first = await loader.load(process.cwd());
+console.log(first.config);
+// { command: 'build', task: 'npm run build' }
+
+// If bytes unchanged, load is cheap (same module cached)
+const cached = await loader.load(process.cwd());
+console.log(cached.config);
+// { command: 'build', task: 'npm run build' } (no re-evaluation)
+
+// After file edit: new bytes, new content key, fresh evaluation
+// File now contains: { command: 'test', task: 'npm run test' }
+const reloaded = await loader.load(process.cwd());
+console.log(reloaded.config);
+// { command: 'test', task: 'npm run test' }
+```
