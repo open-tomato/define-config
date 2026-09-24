@@ -1,3 +1,24 @@
+- order places dry-run guards before v* tag ruleset, trusted publisher before non-dry-run publish
+  trigger: verifying execution order requirements
+  kind: pattern
+  cause: dependencies ensure workflow safety and prevent invalid state transitions
+  resolution: documented execution order matches all task requirements
+  artifact: section: Execution Order, phases 4-5
+  signal: loud
+- empty results for non-existent rulesets is expected state before application
+  trigger: testing ruleset read commands
+  kind: pattern
+  cause: rulesets don't exist yet; apply commands will create them
+  resolution: read commands will return populated rulesets after apply phase
+  artifact: (No main ruleset - expected)
+  signal: silent
+- read commands reliably return current settings for verification
+  trigger: reading current repo state with gh api
+  kind: pattern
+  cause: gh api respects -q filters for structured output
+  resolution: documented commands use consistent -q format for easy verification
+  artifact: gh api repos/open-tomato/define-config -q '...'
+  signal: loud
 - community markdown files use wider wrapping than code files
   trigger: wrap width measurement for community files
   kind: pattern
