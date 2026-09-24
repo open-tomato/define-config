@@ -1,3 +1,7 @@
+- table cells contain substantial paragraph text matching existing documentation structure
+  trigger: gate descriptions in table cells
+  kind: pattern
+  signal: silent
 - progress.txt was already modified in the working tree, and git add -A will commit it with this task
   trigger: when running git diff before the loop commits
   kind: gotcha
