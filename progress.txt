@@ -1,3 +1,17 @@
+- exit 128 (unknown tag, missing origin/main) would read as not-an-ancestor if the check only compares against 0
+  trigger: when testing ancestry through git merge-base --is-ancestor
+  kind: gotcha
+  cause: merge-base uses 0 for yes, 1 for no and other codes for errors
+  resolution: gitIsOnMain returns a boolean only for exits 0 and 1 and throws on anything else, so the refusal names git's error
+  artifact: git merge-base exited 128
+  signal: silent
+- inherited GIT_DIR or GIT_INDEX_FILE from a hook would point git in the mkdtemp repository at the real repository
+  trigger: when a test spawns git in a scratch repository
+  kind: pattern
+  cause: git honours GIT_* env vars over cwd
+  resolution: strip every GIT_* variable and set GIT_CONFIG_GLOBAL=/dev/null plus a fixed author and committer identity in the spawned env
+  artifact: scratchEnv
+  signal: silent
 - actions/setup-node v4 tops out at v4.4.0 (2025-04-14) while v7.0.0 exists; actions/checkout has v7.0.1
   trigger: when reviewing the pinned action majors
   kind: location

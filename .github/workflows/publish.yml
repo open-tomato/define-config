@@ -1,0 +1,62 @@
+name: Publish
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to publish, e.g. v0.5.1
+        required: true
+        type: string
+      dry-run:
+        description: Rehearse the publish with npm publish --dry-run
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: publish-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Inputs reach the shell through env, never through ${{ }} in a run line.
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+      # inputs.dry-run is empty on a tag push, so only a dispatch can rehearse.
+      DRY_RUN: ${{ inputs.dry-run == true }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - name: Install npm for trusted publishing
+        run: |
+          npm install -g npm@11.20.0
+          npm --version
+      - name: Guard the release tag
+        run: bun run scripts/publish-guard.ts "$RELEASE_TAG"
+      - run: bun install --frozen-lockfile
+      - run: bun run gates
+      - name: Publish to npm
+        run: |
+          args=(--provenance --access public)
+          if [ "$DRY_RUN" = 'true' ]; then
+            args+=(--dry-run)
+          fi
+          npm publish "${args[@]}"
