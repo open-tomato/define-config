@@ -3,7 +3,7 @@
  * returns, where every handler under `on` is a step id or a
  * `{ to, repeat }` edge, and the host's step registry, and produces the
  * {@link Graph}: one node per step entry, one edge per handler, one
- * {@link FlowSummary} per flow.
+ * {@link GraphHook} per resolved `when:`, one {@link FlowSummary} per flow.
  *
  * Rules:
  * - every plain-object value at a step id is a step entry and becomes a
@@ -48,7 +48,7 @@
 
 import type { Diagnostic } from '../diagnostics';
 import type { FlattenResult } from './flatten';
-import type { FlowSummary, Graph, GraphEdge, GraphNode, StepRegistry } from './types';
+import type { FlowSummary, Graph, GraphEdge, GraphHook, GraphNode, StepRegistry } from './types';
 
 import { error, pathToString } from '../diagnostics';
 import { isPlainObject } from '../merge/plain-object';
@@ -64,26 +64,15 @@ export interface NodeSource {
   readonly implicit: boolean;
 }
 
-/** A `when:` placement: a node run right before or after its anchor. It is not an edge. */
-export interface GraphHook {
-  /** The name of the flow the hook belongs to. */
-  readonly flow: string;
-  /** The key in {@link Graph.nodes} of the node carrying `when:`. */
-  readonly node: string;
-  /** The key in {@link Graph.nodes} of the node `when:` names. */
-  readonly anchor: string;
-  /** Whether the node runs before or after its anchor. */
-  readonly position: 'before' | 'after';
-}
-
 /** What {@link build} returns. */
 export interface BuildResult {
-  /** The graph: nodes, edges in declaration order, and a summary per flow. */
+  /**
+   * The graph: nodes, edges and `when:` placements in declaration order,
+   * and a summary per flow.
+   */
   readonly graph: Graph;
   /** Where each node came from, keyed like {@link Graph.nodes}. */
   readonly sources: Readonly<Record<string, NodeSource>>;
-  /** Every `when:` placement whose anchor resolved, in declaration order. */
-  readonly hooks: readonly GraphHook[];
   /** Every `unknown-step`, `unknown-outcome` and `impure-when` error, in declaration order. */
   readonly diagnostics: readonly Diagnostic[];
 }
@@ -384,8 +373,8 @@ function buildFlow(
  * @param flattened - What `flatten` returned: the flows, each handler a
  * step id or a `{ to, repeat }` edge, and the path each entry was written at.
  * @param registry - The host's steps, keyed by step name.
- * @returns The graph, where each node came from, every `when:` placement,
- * and the `unknown-step`, `unknown-outcome` and `impure-when` errors, each
+ * @returns The graph with every `when:` placement in `graph.hooks`, where
+ * each node came from, and the `unknown-step`, `unknown-outcome` and `impure-when` errors, each
  * at a path rooted at `flows`.
  */
 export function build(
@@ -401,10 +390,10 @@ export function build(
     graph: {
       nodes: Object.fromEntries(states.flatMap((state) => [...state.nodes])),
       edges: states.flatMap((state) => state.edges),
+      hooks: states.flatMap((state) => state.hooks),
       flows: Object.fromEntries(built.map((item) => [item.summary.name, item.summary])),
     },
     sources: Object.fromEntries(states.flatMap((state) => [...state.sources])),
-    hooks: states.flatMap((state) => state.hooks),
     diagnostics,
   };
 }

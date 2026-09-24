@@ -2,6 +2,11 @@
 
 One section per released version, newest first, headed `## <version> — <date>, <release title>`. All additions to the public surface carry a change note.
 
+## 0.2.1 — 2026-09-24, resolveGraph returns its `when:` placements as `graph.hooks`
+
+- **resolveGraph**: returns every resolved `when:` placement as `graph.hooks`, a `GraphHook[]` in declaration order (and so does `load`); a hook is not an edge, and a host that deep-equals a whole `Graph` sees a new `hooks` key.
+- **types**: `GraphHook` and `FlowSummary` are exported as types from the package entry.
+
 ## 0.2.0 — 2026-09-24, define-config 0.2.0 — expose provenance, type root-level `$replace`
 
 - **merge**: returns `provenance`, a frozen map from each dot-joined key path to the records of the entries that set, removed or replaced it, in entry order; a record carries the entry's index and, when the entry has one, its `$layer`.

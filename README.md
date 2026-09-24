@@ -216,6 +216,33 @@ console.log(looped.graph.edges);
 // [{ from: 'retry.attempt', outcome: 'fail', to: 'retry.attempt', repeat: true }]
 ```
 
+A `when:` placement creates a hook in `result.graph.hooks`: it positions one step before or
+after another without an edge. The hook's node runs before or after its anchor, then the flow
+continues from the anchor; a hook is not followed by outcome.
+
+```ts
+import { resolveGraph } from '@open-tomato/define-config';
+
+const result = resolveGraph(
+  {
+    next: {
+      $start: 'build',
+      build: { onSuccess: 'test' },
+      lint: { when: 'before:test' },
+      test: {},
+    },
+  },
+  {
+    build: { outcomes: ['success', 'fail'] },
+    lint: { outcomes: ['success'], pure: true },
+    test: { outcomes: ['success', 'fail'] },
+  },
+);
+
+console.log(result.graph.hooks);
+// [{ flow: 'next', node: 'next.lint', anchor: 'next.test', position: 'before' }]
+```
+
 ## createLoader
 
 Find, read, merge, validate and resolve the config files of each layer. For each layer, in order
@@ -308,7 +335,7 @@ surface diagnostics as lint squiggles.
 | `impure-when` | error | A `when:` placement is on a step not registered as `pure: true`. |
 | `cycle` | error | An edge closes a loop in the flow and is not marked `repeat: true`. |
 | `interactive-unattended` | error | An `$unattended` flow reaches an interactive step (registered with `interactive: true`). |
-| `unreachable` | warn | A step entry is never reached when walking the flow from its `$start`. |
+| `unreachable` | warn | A step entry is never reached when walking the flow from its `$start`. A `when:` step is reached only from its anchor, so one whose anchor does not resolve gets `unreachable` beside its `unknown-step`. |
 | `schema` | error | A Standard Schema V1 validation issue. |
 | `load-failed` | error | The loader found a file it could not read: no reader for its extension, `import()` or the reader threw, no `default` export, or a value that is not an entry or an array of entries. |
 

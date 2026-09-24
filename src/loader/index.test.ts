@@ -90,7 +90,7 @@ describe('no layer found', () => {
   test('with steps, an empty graph is still returned', async () => {
     const result = await load(root, { lookup: LOOKUP, layers: [{ layer: 'user', dir: 'empty' }], steps: STEPS });
 
-    expect(result.graph).toEqual({ nodes: {}, edges: [], flows: {} });
+    expect(result.graph).toEqual({ nodes: {}, edges: [], hooks: [], flows: {} });
     expect(result.diagnostics).toEqual([]);
   });
 

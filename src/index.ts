@@ -21,8 +21,10 @@
 export type { Diagnostic, DiagnosticCode } from './diagnostics';
 export type {
   FlowEntry,
+  FlowSummary,
   Graph,
   GraphEdge,
+  GraphHook,
   GraphNode,
   StepEntry,
   StepRegistry,

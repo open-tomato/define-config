@@ -16,8 +16,8 @@
  *   a message naming the edge `a → b` and the ids on the cycle in walk
  *   order, `b → … → a → b`. An edge from a node to itself is a cycle of
  *   one id.
- * - a `when:` placement is a {@link GraphHook}, not an edge, so it closes
- *   no cycle.
+ * - a `when:` placement is a {@link GraphHook} in {@link Graph.hooks}, not
+ *   an edge in {@link Graph.edges}, so it closes no cycle.
  *
  * Which edge a loop is reported on follows from the walk: in
  * `a → b → a` walked from `a`, the edge `b → a` closes it. Two loops

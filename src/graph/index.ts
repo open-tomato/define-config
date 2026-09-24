@@ -5,7 +5,7 @@
  * 1. `./normalise` folds the sugar handlers into `on` (`handler-conflict`);
  * 2. `./flatten` lifts inline entries into step entries of their own and
  *    rewrites edge objects as `{ to, repeat }` (`duplicate-key`);
- * 3. `./build` makes the nodes and edges against the host's step registry
+ * 3. `./build` makes the nodes, edges and hooks against the host's step registry
  *    (`unknown-step`, `unknown-outcome`, `impure-when`);
  * 4. `./cycles` reports every back edge not marked `repeat: true`
  *    (`cycle`);
@@ -53,6 +53,7 @@ export interface ResolveGraphResult {
  * );
  * // { graph: { nodes: { 'next.build': …, 'next.test': … },
  * //            edges: [{ from: 'next.build', outcome: 'success', to: 'next.test', repeat: false }],
+ * //            hooks: [],
  * //            flows: { next: { name: 'next', start: 'next.build', unattended: false, nodes: […] } } },
  * //   diagnostics: [] }
  * ```

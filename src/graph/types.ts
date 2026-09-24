@@ -185,6 +185,21 @@ export interface GraphEdge {
   repeat: boolean | number;
 }
 
+/**
+ * A `when:` placement of a {@link Graph}: a node run right before or after
+ * its anchor. It is not an edge.
+ */
+export interface GraphHook {
+  /** The name of the flow the hook belongs to. */
+  readonly flow: string;
+  /** The key in {@link Graph.nodes} of the node carrying `when:`. */
+  readonly node: string;
+  /** The key in {@link Graph.nodes} of the node `when:` names. */
+  readonly anchor: string;
+  /** Whether the node runs before or after its anchor. */
+  readonly position: 'before' | 'after';
+}
+
 /** One resolved flow of a {@link Graph}. */
 export interface FlowSummary {
   /** The flow's name. */
@@ -203,6 +218,13 @@ export interface Graph {
   nodes: Record<string, GraphNode>;
   /** Every edge, in the order the flows declare them. */
   edges: GraphEdge[];
+  /**
+   * Every resolved `when:` placement, in the order the flows declare them.
+   * A hook is not an edge: it is not in {@link Graph.edges} and closes no
+   * cycle. A `when:` whose anchor names neither a step entry of its flow
+   * nor a registered step is an `unknown-step` and makes no hook.
+   */
+  hooks: GraphHook[];
   /** Every flow, keyed by flow name. */
   flows: Record<string, FlowSummary>;
 }
