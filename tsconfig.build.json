@@ -1,11 +1,9 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "display": "build: declarations for the published src, tests and fixtures excluded",
-  "extends": "./tsconfig.json",
+  "extends": ["./tsconfig.json", "@open-tomato/typescript-config/declarations"],
   "compilerOptions": {
-    "noEmit": false,
-    "declaration": true,
-    "emitDeclarationOnly": true,
+    "isolatedDeclarations": true,
     "rootDir": "src",
     "outDir": "dist"
   },
