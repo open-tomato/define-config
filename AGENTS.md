@@ -82,7 +82,7 @@ during development, `bun run <gate>` stays available to run a single gate.
 
 ## ESLint Style Law for Agent Sessions
 
-**Style is enforced by ESLint.** Write code, run `bun run lint`, and take the ordering and fixes from the message. The config is in `eslint.config.mjs` and `sharedRules.mjs` (copied from open-tomato/rafa, trimmed to library scope).
+**Style is enforced by ESLint.** Write code, run `bun run lint`, and take the ordering and fixes from the message. The config is in `eslint.config.mjs`, which extends `@open-tomato/eslint-config`.
 
 ### Style Rules Summary
 

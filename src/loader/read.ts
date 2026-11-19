@@ -115,7 +115,11 @@ const JSON_EXTENSION = '.json';
 
 /** A source that could not be read, with the reason why. */
 class LoadFailure {
-  constructor(readonly reason: string) {}
+  readonly reason: string;
+
+  constructor(reason: string) {
+    this.reason = reason;
+  }
 }
 
 /** The message of a thrown value; `import()` may reject with a non-`Error`. */

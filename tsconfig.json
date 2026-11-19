@@ -1,14 +1,11 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "display": "check-types: src (tests included) and scripts",
-  "extends": "./tsconfig.base.json",
+  // tooling: scripts, tests and fixtures never ship, so this check runs
+  // without isolatedDeclarations; tsconfig.build.json holds the shipped
+  // src to it.
+  "extends": ["@open-tomato/typescript-config/bun", "@open-tomato/typescript-config/tooling"],
   "compilerOptions": {
-    "lib": ["ES2022"],
-    "module": "ESNext",
-    "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true,
-    "noImplicitReturns": true,
-    "noImplicitThis": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
