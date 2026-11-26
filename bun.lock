@@ -92,7 +92,7 @@
 
     "@open-tomato/eslint-plugin": ["@open-tomato/eslint-plugin@0.1.0", "", { "peerDependencies": { "eslint": "^9.39.0" } }, "sha512-oQ6OOv6WX/COoTcKLjaV2r+Jm0cjyzBM6Jh40g+J8gO8VapzOrnVmGftNDngd/4BI/VN5wi4+Zv0eFpwpGNWfA=="],
 
-    "@open-tomato/typescript-config": ["@open-tomato/typescript-config@0.1.0", "", { "peerDependencies": { "typescript": ">=5.8.0" } }, "sha512-Vj7i7jIW9ZFNSTJK/BLX93Tzk9pk9t+j6J3Q5Z78Lb9Fq+SAJdauUhbISl5H4wraYIA6HlkSddkX+1jI/jbSSg=="],
+    "@open-tomato/typescript-config": ["@open-tomato/typescript-config@0.1.1", "", { "peerDependencies": { "typescript": ">=5.8.0" } }, "sha512-QneUN+zYOXHL4XuNTPCe36GhefP8zpbiFElFNbnsMidSNGZOFhNPxhQMsr6uDAGl17rnDASFDjaIG1hY49SzJQ=="],
 
     "@ota-meshi/ast-token-store": ["@ota-meshi/ast-token-store@0.3.0", "", {}, "sha512-XRO0zi2NIUKq2lUk3T1ecFSld1fMWRKE6naRFGkgkdeosx7IslyUKNv5Dcb5PJTja9tHJoFu0v/7yEpAkrkrTg=="],
 
